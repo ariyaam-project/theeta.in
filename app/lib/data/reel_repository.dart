@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -215,8 +214,7 @@ String _defaultApiBase() {
   if (_apiBaseOverride.isNotEmpty) {
     return _apiBaseOverride.replaceAll(RegExp(r'/$'), '');
   }
-  if (Platform.isAndroid) return 'http://10.0.2.2:8787';
-  return 'https://aerosol-reformer-twirl.ngrok-free.dev';
+  return 'https://auth.theeta.in';
 }
 
 Reel _savedItemToReel(Map<String, dynamic> item) {
