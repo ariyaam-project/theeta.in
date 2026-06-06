@@ -13,8 +13,14 @@ class MapTab extends StatelessWidget {
   final AppState state;
   const MapTab({super.key, required this.state});
 
-  // Roughly centers India when there are no spots yet.
-  static const _fallbackCenter = LatLng(20.5937, 78.9629);
+  // Kerala center — the map is locked to Kerala.
+  static const _fallbackCenter = LatLng(10.5, 76.2);
+
+  // Hard pan/zoom bounds around Kerala.
+  static final _keralaBounds = LatLngBounds(
+    const LatLng(8.0, 74.7),
+    const LatLng(12.95, 77.6),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +55,12 @@ class MapTab extends StatelessWidget {
             FlutterMap(
               options: MapOptions(
                 initialCenter: center,
-                initialZoom: located.isEmpty ? 3.5 : 11,
+                initialZoom: located.isEmpty ? 7 : 11,
+                minZoom: 6,
+                maxZoom: 18,
+                cameraConstraint: CameraConstraint.contain(
+                  bounds: _keralaBounds,
+                ),
               ),
               children: [
                 TileLayer(

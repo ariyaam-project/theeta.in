@@ -39,7 +39,16 @@ async function ensureLeaflet(): Promise<any> {
 function render(L: any) {
   if (!host.value) return
   if (!map) {
-    map = L.map(host.value).setView([20.5937, 78.9629], props.spots.length ? 11 : 4)
+    // Lock the map to Kerala — no panning away, no zooming out past it.
+    const keralaBounds: [[number, number], [number, number]] = [
+      [8.0, 74.7],
+      [12.95, 77.6]
+    ]
+    map = L.map(host.value, {
+      maxBounds: keralaBounds,
+      maxBoundsViscosity: 1.0,
+      minZoom: 6
+    }).setView([10.5, 76.2], props.spots.length ? 9 : 7)
     // Stylised, illustrative basemap (CARTO Voyager) — no API key needed.
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
