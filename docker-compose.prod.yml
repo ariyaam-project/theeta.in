@@ -20,6 +20,7 @@ services:
       - ./worker/.env
     volumes:
       - whisper_cache:/root/.cache/huggingface
+      - ./worker/instagram-cookies.txt:/app/instagram-cookies.txt:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
