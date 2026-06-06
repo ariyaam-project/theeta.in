@@ -17,10 +17,12 @@ export async function ensureSchema(db: D1Database) {
       email TEXT NOT NULL,
       display_name TEXT NOT NULL,
       avatar_url TEXT,
+      password_hash TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       last_login_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
+    db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(lower(email))'),
     db.prepare(`CREATE TABLE IF NOT EXISTS auth_sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,

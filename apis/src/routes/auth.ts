@@ -10,11 +10,23 @@ import {
   getGoogleRedirectUri,
   verifyGoogleIdToken
 } from '../lib/google'
-import { createAuthSession, clearAuthSession, getCurrentUser, upsertGoogleUser } from '../lib/auth'
+import {
+  createAuthSession,
+  clearAuthSession,
+  createEmailUser,
+  findUserByEmail,
+  getCurrentUser,
+  touchLastLogin,
+  upsertGoogleUser
+} from '../lib/auth'
+import { hashPassword, verifyPassword } from '../lib/crypto'
 import { assertSameOrigin } from '../lib/security'
 import { apiError } from '../lib/http'
 
 export const authRoutes = new Hono<AppEnv>()
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MIN_PASSWORD_LENGTH = 8
 
 const getFrontendUrl = (c: { env: AppEnv['Bindings'] }, path: string) => {
   const baseUrl = c.env.FRONTEND_URL || c.env.APP_URL
@@ -73,6 +85,55 @@ authRoutes.post('/google/native', async (c) => {
   const userId = await upsertGoogleUser(c, profile)
   const { token, expiresAt } = await createAuthSession(c, userId)
   const user = await getCurrentUser(c)
+  return c.json({ token, expiresAt, user })
+})
+
+// Email/password: create an account and return a Theta bearer token.
+authRoutes.post('/register', async (c) => {
+  const body = await c.req
+    .json<{ email?: string; password?: string; name?: string }>()
+    .catch(() => ({}) as any)
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const password = typeof body?.password === 'string' ? body.password : ''
+  const name = typeof body?.name === 'string' ? body.name.trim() : ''
+
+  if (!EMAIL_RE.test(email)) apiError(400, 'A valid email is required')
+  if (password.length < MIN_PASSWORD_LENGTH)
+    apiError(400, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+  if (!name) apiError(400, 'Name is required')
+
+  const existing = await findUserByEmail(c, email)
+  if (existing) apiError(409, 'An account with this email already exists')
+
+  const passwordHash = await hashPassword(password)
+  const userId = await createEmailUser(c, { email, name: name.slice(0, 80), passwordHash })
+  const { token, expiresAt } = await createAuthSession(c, userId)
+  const user = { id: userId, displayName: name.slice(0, 80), avatarUrl: null, email }
+  return c.json({ token, expiresAt, user })
+})
+
+// Email/password: verify credentials and return a Theta bearer token.
+authRoutes.post('/login', async (c) => {
+  const body = await c.req
+    .json<{ email?: string; password?: string }>()
+    .catch(() => ({}) as any)
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const password = typeof body?.password === 'string' ? body.password : ''
+  if (!email || !password) apiError(400, 'Email and password are required')
+
+  const row = await findUserByEmail(c, email)
+  if (!row || !row.password_hash || !(await verifyPassword(password, row.password_hash))) {
+    apiError(401, 'Invalid email or password')
+  }
+
+  await touchLastLogin(c, row.id)
+  const { token, expiresAt } = await createAuthSession(c, row.id)
+  const user = {
+    id: row.id,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+    email: row.email
+  }
   return c.json({ token, expiresAt, user })
 })
 

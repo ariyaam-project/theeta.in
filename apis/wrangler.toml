@@ -6,14 +6,20 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "theta"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "bb7e9eef-e44f-4811-b3a1-85bb39de1fbf"
 preview_database_id = "theta-local"
 
 # Local vars live in .dev.vars; production uses `wrangler secret put`.
+# Secrets (set via `wrangler secret put`): GOOGLE_CLIENT_SECRET, SERVICE_TOKEN
 [vars]
-APP_URL = "https://aerosol-reformer-twirl.ngrok-free.dev"
-FRONTEND_URL = "http://localhost:3000"
-FASTAPI_WORKER_URL = "http://192.168.10.101:8001"
+APP_URL = "https://auth.theeta.in"
+FRONTEND_URL = "https://theeta.in"
+FASTAPI_WORKER_URL = "https://api.theeta.in"
+GOOGLE_CLIENT_ID = "692553043515-2v7s88v0u3i5h0ib2oi9mj18796lkdsb.apps.googleusercontent.com"
+
+[[routes]]
+pattern = "auth.theeta.in"
+custom_domain = true
 
 # Run `wrangler d1 create theta` and paste the real database_id above before deploying.
 # Uncomment when the bindings exist:

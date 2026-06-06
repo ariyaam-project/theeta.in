@@ -14,6 +14,7 @@ export type UserRow = {
   email: string
   display_name: string
   avatar_url: string | null
+  password_hash: string | null
   created_at: string
   updated_at: string
   last_login_at: string
@@ -84,6 +85,46 @@ export async function upsertGoogleUser(c: Context<AppEnv>, profile: GoogleProfil
     .run()
 
   return userId
+}
+
+/** Look up a user by email (case-insensitive). Includes password_hash. */
+export async function findUserByEmail(c: Context<AppEnv>, email: string) {
+  const db = getDb(c)
+  await ensureSchema(db)
+  return db
+    .prepare('SELECT * FROM users WHERE lower(email) = lower(?) LIMIT 1')
+    .bind(email)
+    .first<UserRow>()
+}
+
+/**
+ * Create an email/password user. google_sub is NOT NULL UNIQUE, so we store a
+ * synthetic `pwd:<id>` marker (same pattern dev login uses with `dev:<email>`).
+ */
+export async function createEmailUser(
+  c: Context<AppEnv>,
+  params: { email: string; name: string; passwordHash: string }
+) {
+  const db = getDb(c)
+  await ensureSchema(db)
+  const userId = newId()
+  await db
+    .prepare(
+      `INSERT INTO users (id, google_sub, email, display_name, password_hash, last_login_at)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+    )
+    .bind(userId, `pwd:${userId}`, params.email, params.name, params.passwordHash)
+    .run()
+  return userId
+}
+
+/** Bump last_login_at after a successful password login. */
+export async function touchLastLogin(c: Context<AppEnv>, userId: string) {
+  const db = getDb(c)
+  await db
+    .prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .bind(userId)
+    .run()
 }
 
 /** Token from `Authorization: Bearer` (mobile) or the session cookie (web). */
