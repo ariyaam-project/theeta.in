@@ -13,8 +13,9 @@ services:
     build:
       context: ./worker
       dockerfile: Dockerfile
-    image: theta-transcription-worker:${THETA_WORKER_TAG:-latest}
     restart: unless-stopped
+    ports:
+      - "8888:8000"
     environment:
       API_BASE_URL: "${API_BASE_URL:?Set API_BASE_URL to the deployed Cloudflare Worker URL}"
       SERVICE_TOKEN: "${SERVICE_TOKEN:?Set SERVICE_TOKEN to the same secret used by the API}"
