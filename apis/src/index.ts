@@ -9,12 +9,15 @@ import { surpriseRoutes } from './routes/surprise'
 import { listRoutes } from './routes/lists'
 import { saveRoutes } from './routes/saves'
 import { internalRoutes } from './routes/internal'
+import { devPageRoutes, devRoutes } from './routes/dev'
 
 const app = new Hono<AppEnv>()
 
 app.get('/', (c) => c.json({ service: 'theta-api', ok: true }))
 
+app.route('/', devPageRoutes)
 app.route('/api/auth', authRoutes)
+app.route('/api/dev', devRoutes)
 app.route('/api', meRoutes)
 app.route('/api/reels', reelRoutes)
 app.route('/api/restaurants', restaurantRoutes)

@@ -16,6 +16,11 @@ import { apiError } from '../lib/http'
 
 export const authRoutes = new Hono<AppEnv>()
 
+const getFrontendUrl = (c: { env: AppEnv['Bindings'] }, path: string) => {
+  const baseUrl = c.env.FRONTEND_URL || c.env.APP_URL
+  return new URL(path, baseUrl).toString()
+}
+
 // Web: start OAuth → redirect to Google.
 authRoutes.get('/google', (c) => {
   assertGoogleConfig(c)
@@ -48,14 +53,14 @@ authRoutes.get('/google/callback', async (c) => {
   deleteCookie(c, OAUTH_STATE_COOKIE, { path: '/' })
 
   if (!state || !expectedState || state !== expectedState || !code) {
-    return c.redirect('/?authError=google')
+    return c.redirect(getFrontendUrl(c, '/?authError=google'))
   }
 
   const tokens = await exchangeGoogleCode(c, code)
   const profile = await fetchGoogleProfile(tokens.access_token)
   const userId = await upsertGoogleUser(c, profile)
   await createAuthSession(c, userId)
-  return c.redirect('/')
+  return c.redirect(getFrontendUrl(c, '/'))
 })
 
 // Mobile: exchange a Google ID token for a Theta bearer token.

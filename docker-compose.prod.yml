@@ -1,0 +1,48 @@
+# Production container for the FastAPI reel worker.
+#
+# The Hono API is a Cloudflare Worker, so deploy it with Wrangler:
+#   cd apis && npm run db:migrate:remote && npm run deploy
+#
+# Run this file only on the host that should process reel jobs:
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+name: theta-prod
+
+services:
+  transcription-worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    image: theta-transcription-worker:${THETA_WORKER_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: "${API_BASE_URL:?Set API_BASE_URL to the deployed Cloudflare Worker URL}"
+      SERVICE_TOKEN: "${SERVICE_TOKEN:?Set SERVICE_TOKEN to the same secret used by the API}"
+      POLL_ENABLED: "${POLL_ENABLED:-true}"
+      POLL_INTERVAL_SECONDS: "${POLL_INTERVAL_SECONDS:-5}"
+      WHISPER_MODEL: "${WHISPER_MODEL:-small}"
+      WHISPER_DEVICE: "${WHISPER_DEVICE:-cpu}"
+      WHISPER_COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-int8}"
+      MAX_DURATION_SECONDS: "${MAX_DURATION_SECONDS:-180}"
+      MAX_DOWNLOAD_MB: "${MAX_DOWNLOAD_MB:-100}"
+      COOKIES_FILE: "${COOKIES_FILE:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:?Set OPENAI_API_KEY for location extraction}"
+      OPENAI_LOCATION_MODEL: "${OPENAI_LOCATION_MODEL:-gpt-5.4-mini}"
+      TRANSCRIPTION_PROVIDER: "${TRANSCRIPTION_PROVIDER:-openai}"
+      OPENAI_TRANSCRIPTION_MODEL: "${OPENAI_TRANSCRIPTION_MODEL:-whisper-1}"
+      OPENAI_TRANSCRIPTION_LANGUAGE: "${OPENAI_TRANSCRIPTION_LANGUAGE:-}"
+      OPENAI_TRANSCRIPTION_PROMPT: "${OPENAI_TRANSCRIPTION_PROMPT:-The audio is primarily Malayalam from Kerala food reels, sometimes mixed with English. Transcribe Malayalam words accurately and do not convert them to Kannada script.}"
+      LOCATION_ACCEPT_THRESHOLD: "${LOCATION_ACCEPT_THRESHOLD:-0.80}"
+      LOCATION_MARGIN_THRESHOLD: "${LOCATION_MARGIN_THRESHOLD:-0.15}"
+      MAX_LOCATION_COMMENTS: "${MAX_LOCATION_COMMENTS:-30}"
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  whisper_cache:

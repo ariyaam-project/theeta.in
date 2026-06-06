@@ -127,14 +127,25 @@ export async function ensureSchema(db: D1Database) {
       id TEXT PRIMARY KEY,
       reel_id TEXT NOT NULL,
       restaurant_name_raw TEXT,
+      branch_name_raw TEXT,
       area_raw TEXT,
+      city_raw TEXT,
+      state_raw TEXT,
+      country_raw TEXT,
+      suggested_address TEXT,
+      suggested_lat REAL,
+      suggested_lng REAL,
+      suggested_location_confidence REAL,
       cuisine TEXT,
       dishes TEXT,
       sources TEXT,
+      landmarks TEXT,
+      evidence TEXT,
+      confidence REAL,
+      resolution_status TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (reel_id) REFERENCES reels(id) ON DELETE CASCADE
     )`),
-
     // --- Dishes ---
     db.prepare(`CREATE TABLE IF NOT EXISTS dishes (
       id TEXT PRIMARY KEY,
@@ -235,6 +246,19 @@ export async function ensureSchema(db: D1Database) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS saved_reels (
+      user_id TEXT NOT NULL,
+      reel_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'saved'
+        CHECK (status IN ('saved','processing','processed','failed')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, reel_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (reel_id) REFERENCES reels(id) ON DELETE CASCADE
+    )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_saved_reels_user ON saved_reels(user_id, created_at DESC)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_saved_reels_reel ON saved_reels(reel_id)'),
 
     // --- Pipeline ---
     db.prepare(`CREATE TABLE IF NOT EXISTS processing_jobs (

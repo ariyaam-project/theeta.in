@@ -16,9 +16,10 @@ npm run db:seed:local              # load demo restaurant/reel (seeds/seed.sql)
 npm run dev                        # wrangler dev → http://localhost:8787
 ```
 
-Or via Docker (from repo root): `docker compose up --build`, then
+Or via Docker (from repo root): `cp .env.example .env && docker compose up --build`, then
 `docker compose run --rm api npm run db:seed:local`.
 Compose also starts the FastAPI transcription worker at `http://localhost:8000`.
+See [docs/docker.md](../docs/docker.md) for local and production compose usage.
 
 Smoke test:
 ```bash
@@ -58,14 +59,19 @@ Auth = cookie (web) **or** `Authorization: Bearer` (mobile) — both resolve to 
 
 ## Reel pipeline
 
-`POST /api/reels` creates a `pending` reel and queued D1 job. The FastAPI service
-in `../worker` claims jobs through service-token authenticated internal routes,
-downloads audio, transcribes it, and writes the result back. Restaurant
-detection, comment analysis, and summarization remain future pipeline stages.
+`POST /api/reels` requires a session, saves the reel for the current user, and
+dedupes the canonical `reels` row by Instagram shortcode. A queued D1 job is
+created only for a new canonical reel. If another user already saved the same
+reel, the API reuses that base reel and only adds the current user's
+`saved_reels` ref. The FastAPI service in `../worker` claims jobs through
+service-token authenticated internal routes, extracts caption/comments, uses
+OpenAI for structured location clues, and uses OpenAI-suggested address/lat/lng
+as the location. Audio is downloaded and transcribed only when text evidence
+does not resolve a confident location.
 
 ## Not yet built
 
-- Restaurant detection, comments analysis, trust scoring, and summarization.
+- Comment sentiment analysis, trust scoring, and summarization.
 - **Foodlists + Visits** — Phase 2 (contract reserved in docs/api.md).
 - **Search** uses `LIKE` (not FTS5); **media URLs** are direct `https://media.theta.in/<key>`
   (not R2 signed URLs). Both are noted upgrades.

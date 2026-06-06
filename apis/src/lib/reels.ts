@@ -41,3 +41,29 @@ export async function enqueueReel(c: Context<AppEnv>, db: D1Database, reelId: st
   const queue = c.env.REEL_QUEUE
   if (queue) await queue.send({ reelId, type: 'extract' })
 }
+
+export function triggerFastApiWorker(c: Context<AppEnv>, reelId: string) {
+  const baseUrl = c.env.FASTAPI_WORKER_URL?.replace(/\/$/, '')
+  if (!baseUrl) return
+
+  const promise = fetch(`${baseUrl}/v1/jobs/trigger`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${c.env.SERVICE_TOKEN}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({ reelId })
+  }).then(async (response) => {
+    if (!response.ok) {
+      console.error('FastAPI worker trigger failed', {
+        reelId,
+        status: response.status,
+        body: await response.text().catch(() => '')
+      })
+    }
+  }).catch((error) => {
+    console.error('FastAPI worker trigger error', { reelId, error: String(error) })
+  })
+
+  c.executionCtx.waitUntil(promise)
+}

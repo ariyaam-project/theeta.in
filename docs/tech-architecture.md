@@ -33,7 +33,7 @@ Theta is built on the existing `mandiboard` Nuxt/Cloudflare app. We **reuse the 
 | Database | **Cloudflare D1 (SQLite)** — binding `DB` | Reuse existing DB; extend with Theta tables |
 | Queue | **Cloudflare Queues** | Decouple submit → processing |
 | Object storage | **Cloudflare R2** | Reel video/audio/thumbnails, OCR frames |
-| Cache / KV | **Cloudflare KV** | Hot restaurant JSON, Google Places cache, rate limits |
+| Cache / KV | **Cloudflare KV** | Hot restaurant JSON, rate limits |
 | Heavy worker | **FastAPI** (container: Fly.io / Railway / VPS) | Reel download, transcription, OCR, LLM — can't run on Workers |
 | Search | **SQLite FTS5** (name/area) + **Haversine** (geo) | D1 has no PostGIS/trigram; fine at MVP scale |
 
@@ -71,7 +71,7 @@ Theta is built on the existing `mandiboard` Nuxt/Cloudflare app. We **reuse the 
    ┌──────────────────────────┐             │
    │ FastAPI heavy worker      │─────────────┘
    │ yt-dlp / IG scrape        │   ┌──────────────────┐
-   │ Whisper / ffmpeg / OCR    │──►│ Google Places    │
+   │ Whisper / ffmpeg / OCR    │──►│ OpenAI location  │
    │ LLM entity + sentiment    │   │ IG scrape provider│
    │ trust score + summary     │   │ LLM (Claude/GPT) │
    │ writes D1 over HTTP        │   └──────────────────┘
@@ -86,16 +86,16 @@ Theta is built on the existing `mandiboard` Nuxt/Cloudflare app. We **reuse the 
 
 | # | Step | Service | Writes |
 |---|---|---|---|
-| 1 | Submit + dedupe | Nuxt route | `reels` (status `pending`) → enqueue |
+| 1 | Save + dedupe canonical reel | Worker route | `saved_reels` per user; `reels` canonical by shortcode → enqueue only once |
 | 2 | Extract (caption, thumb, audio, creator) | FastAPI | `reels`, `creators`, R2 |
 | 3 | Transcribe audio | FastAPI | `transcripts` |
 | 4 | Detect restaurant (caption+transcript+OCR+tags) | FastAPI | `reel_entities` |
-| 5 | Resolve place (D1 → Google Places) | FastAPI | `restaurants`, `restaurant_reels`, `places_cache` |
+| 5 | Resolve place with AI-suggested address/lat/lng | FastAPI | `restaurants`, `restaurant_reels` |
 | 6 | Comments + sentiment | FastAPI | `comments`, `comment_analysis` |
 | 7 | Trust score + AI summary | FastAPI | `trust_scores`, `ai_summaries`, reel → `complete` |
 | 8 | Publish | Nuxt route | invalidate KV restaurant page |
 
-`reels.status` machine: `pending → downloading → transcribing → detecting → resolving → analyzing_comments → summarizing → complete` (any → `failed`). Each step is a `processing_jobs` row with retry/backoff.
+`reels.status` machine: `pending → downloading → transcribing → detecting → resolving → analyzing_comments → summarizing → complete` (any → `failed`). Each step is a `processing_jobs` row with retry/backoff. `saved_reels.status` is the user's ref state: `processing → processed` or `failed`.
 
 ---
 
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS reels (
   like_count INTEGER,
   comment_count INTEGER,
   view_count INTEGER,
-  submitted_by TEXT,                       -- nullable = anon submit
+  submitted_by TEXT,                       -- first user who submitted the canonical reel
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','downloading','transcribing','detecting',
                       'resolving','analyzing_comments','summarizing','complete','failed')),
@@ -457,7 +457,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_reel_type ON processing_jobs(reel_id, type);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON processing_jobs(status);
 ```
 
-### 5.18 `places_cache` (Google Places raw)
+### 5.18 `places_cache` (reserved provider cache)
 ```sql
 CREATE TABLE IF NOT EXISTS places_cache (
   google_place_id TEXT PRIMARY KEY,
@@ -517,7 +517,7 @@ Internal, service-token auth. One endpoint per pipeline step, **idempotent**, ke
 | `POST /jobs/transcribe` | ffmpeg audio → Whisper → `transcripts` |
 | `POST /jobs/ocr` | Sample frames → OCR → merge into detection signals |
 | `POST /jobs/detect` | LLM entity extraction → `reel_entities` |
-| `POST /jobs/resolve` | D1 match → Google Places → `restaurants`, `restaurant_reels` |
+| `POST /jobs/resolve` | AI suggested location → `restaurants`, `restaurant_reels` |
 | `POST /jobs/comments` | Fetch comments → sentiment → `comments`, `comment_analysis` |
 | `POST /jobs/summary` | Compute `trust_scores` + `ai_summaries`; reel → `complete` |
 
@@ -556,7 +556,7 @@ score = w1 * audience_positive_ratio
 ## 10. Cross-Cutting
 
 - **Dedupe:** `reels.ig_shortcode` UNIQUE + KV lock during processing → re-submit returns existing.
-- **Caching:** restaurant JSON in KV, invalidated on new `ai_summaries`/`trust_scores`. Google Places in `places_cache` + KV TTL.
+- **Caching:** restaurant JSON in KV, invalidated on new `ai_summaries`/`trust_scores`.
 - **Media:** binaries in R2; D1 stores keys only; Nuxt issues R2 signed URLs.
 - **Rate limiting:** per-IP/user submit caps in KV (scrape providers are metered) — reuse the same-origin guard already in `security.ts`.
 - **Retries:** `processing_jobs.attempts/max_attempts`, dead-letter on exhaust.

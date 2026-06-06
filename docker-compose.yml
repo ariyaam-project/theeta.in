@@ -1,10 +1,15 @@
-# Theta local stack: Hono API (Cloudflare Worker via wrangler dev + local D1)
+# Theta local stack: Hono API (Cloudflare Worker via wrangler dev + local D1),
 # plus the FastAPI reel download/transcription worker.
 #
-#   docker compose up --build        # start
-#   docker compose run --rm api npm run db:seed:local   # load demo data
+#   cp .env.example .env
+#   docker compose up --build
+#   docker compose run --rm api npm run db:seed:local   # optional demo data
 #
 # API: http://localhost:8787
+# FastAPI worker: http://localhost:8001
+# Web test app: http://localhost:3000
+
+name: theta
 
 services:
   api:
@@ -17,11 +22,14 @@ services:
     environment:
       CI: "true"
       WRANGLER_SEND_METRICS: "false"
+      # Injected into the Worker via --var (see apis/Dockerfile CMD), because
+      # wrangler dev reads worker env from .dev.vars/[vars], not the container env.
       SERVICE_TOKEN: "${SERVICE_TOKEN:-local-development-token}"
-    # Optional: provide Google OAuth + service token for auth flows.
-    # Copy apis/.dev.vars.example -> apis/.dev.vars, then uncomment:
-    # env_file:
-    #   - ./apis/.dev.vars
+      APP_URL: "${APP_URL:-http://localhost:8787}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
+      FASTAPI_WORKER_URL: "${FASTAPI_WORKER_URL:-http://transcription-worker:8000}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
     volumes:
       - ./apis:/app          # live code
       - api_node_modules:/app/node_modules   # keep image's installed deps
@@ -39,28 +47,62 @@ services:
       dockerfile: Dockerfile
     image: theta-transcription-worker
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       API_BASE_URL: "http://api:8787"
       SERVICE_TOKEN: "${SERVICE_TOKEN:-local-development-token}"
+      POLL_ENABLED: "${POLL_ENABLED:-false}"
+      POLL_INTERVAL_SECONDS: "${POLL_INTERVAL_SECONDS:-5}"
       WHISPER_MODEL: "${WHISPER_MODEL:-small}"
       WHISPER_DEVICE: "${WHISPER_DEVICE:-cpu}"
       WHISPER_COMPUTE_TYPE: "${WHISPER_COMPUTE_TYPE:-int8}"
       MAX_DURATION_SECONDS: "${MAX_DURATION_SECONDS:-180}"
       MAX_DOWNLOAD_MB: "${MAX_DOWNLOAD_MB:-100}"
+      COOKIES_FILE: "${COOKIES_FILE:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_LOCATION_MODEL: "${OPENAI_LOCATION_MODEL:-gpt-5.4-mini}"
+      TRANSCRIPTION_PROVIDER: "${TRANSCRIPTION_PROVIDER:-openai}"
+      OPENAI_TRANSCRIPTION_MODEL: "${OPENAI_TRANSCRIPTION_MODEL:-whisper-1}"
+      OPENAI_TRANSCRIPTION_LANGUAGE: "${OPENAI_TRANSCRIPTION_LANGUAGE:-}"
+      OPENAI_TRANSCRIPTION_PROMPT: "${OPENAI_TRANSCRIPTION_PROMPT:-The audio is primarily Malayalam from Kerala food reels, sometimes mixed with English. Transcribe Malayalam words accurately and do not convert them to Kannada script.}"
+      LOCATION_ACCEPT_THRESHOLD: "${LOCATION_ACCEPT_THRESHOLD:-0.80}"
+      LOCATION_MARGIN_THRESHOLD: "${LOCATION_MARGIN_THRESHOLD:-0.15}"
+      MAX_LOCATION_COMMENTS: "${MAX_LOCATION_COMMENTS:-30}"
     depends_on:
       api:
         condition: service_healthy
-    volumes:
-      - whisper_cache:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    volumes:
+      - ./worker/app:/app/app
+      - whisper_cache:/root/.cache/huggingface
+
+  # Web app is a separate/future project; ./web does not exist yet. Gated behind
+  # a profile so default `docker compose up` runs only api + worker.
+  # Enable with: docker compose --profile web up
+  web:
+    profiles: ["web"]
+    image: node:22-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      THETA_API_BASE: "${THETA_API_BASE:-http://localhost:8787}"
+      NUXT_PUBLIC_CLARITY_ID: "${NUXT_PUBLIC_CLARITY_ID:-}"
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   api_node_modules:
   d1_state:
   whisper_cache:
+  web_node_modules:

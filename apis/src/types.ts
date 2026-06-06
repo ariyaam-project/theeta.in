@@ -6,6 +6,8 @@ export type Bindings = {
   CACHE?: KVNamespace
   REEL_QUEUE?: Queue
   APP_URL: string
+  FRONTEND_URL?: string
+  FASTAPI_WORKER_URL?: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
   SERVICE_TOKEN: string

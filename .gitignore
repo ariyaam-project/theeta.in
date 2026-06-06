@@ -64,6 +64,8 @@ coverage/
 *.tmp
 *.bak
 *.mp3
+worker/runs/
 
 # Note: Flutter lives in app/ and keeps its own app/.gitignore
 downloads
+instagram-cookies.txt

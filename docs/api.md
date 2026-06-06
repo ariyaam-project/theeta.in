@@ -103,14 +103,14 @@ List endpoints accept `?page=1&limit=20` (limit max 50). Response:
 
 ## 3. Reels (submit + processing)
 
-### `POST /api/reels` — submit a reel
-Auth: optional (anon allowed; claimed on later signup).
+### `POST /api/reels` — save/submit a reel
+Auth: session. Creates a per-user saved-reel ref and reuses the canonical reel if another user already submitted the same Instagram shortcode.
 ```json
 // request
 { "url": "https://www.instagram.com/reel/Cxyz123/" }
 ```
 ```json
-// 202 Accepted — new submission, processing started
+// 202 Accepted — new canonical reel, or existing reel still processing
 {
   "reel": {
     "id": "r_8af2...",
@@ -119,11 +119,18 @@ Auth: optional (anon allowed; claimed on later signup).
     "url": "https://www.instagram.com/reel/Cxyz123/",
     "createdAt": "2026-06-06T10:20:30Z"
   },
+  "savedReel": {
+    "reelId": "r_8af2...",
+    "status": "processing"
+  },
   "deduped": false
 }
 ```
-- Already-processed reel → **200** with `"deduped": true` and the existing reel (and its `restaurant` if resolved).
+- If another user already saved the same reel, the existing canonical reel is reused and the current user gets their own `saved_reels` row.
+- Already-processed reel → **200** with `"deduped": true`, the existing reel, `savedReel.status: "processed"`, and its `restaurant` if resolved.
+- Existing processing reel → **202** with `"deduped": true` and `savedReel.status: "processing"`.
 - Invalid/non-reel URL → **400**.
+- Missing session → **401**.
 - Rate limited → **429**.
 
 Client then **polls** `GET /api/reels/:id/status` until terminal.
@@ -134,6 +141,8 @@ Auth: optional.
 {
   "id": "r_8af2...",
   "status": "summarizing",
+  "savedStatus": "processing",
+  "savedAt": "2026-06-06T10:20:30Z",
   "step": 7,
   "totalSteps": 8,
   "restaurantSlug": null,
@@ -142,6 +151,29 @@ Auth: optional.
 ```
 `status` ∈ `pending · downloading · transcribing · detecting · resolving · analyzing_comments · summarizing · complete · failed`.
 When `complete`: `restaurantSlug` is set → navigate to the restaurant page. When `failed`: `error` has a human message.
+
+### `GET /api/reels/saved/list` — current user's saved reels
+Auth: session.
+```json
+{
+  "items": [
+    {
+      "reelId": "r_8af2...",
+      "savedStatus": "processed",
+      "savedAt": "2026-06-06T10:20:30Z",
+      "reel": {
+        "id": "r_8af2...",
+        "shortcode": "Cxyz123",
+        "url": "https://www.instagram.com/reel/Cxyz123/",
+        "status": "complete",
+        "caption": "Best shawarma in Kozhikode 🌯",
+        "thumbnailUrl": "https://media.theta.in/...jpg",
+        "createdAt": "2026-06-06T10:20:30Z"
+      }
+    }
+  ]
+}
+```
 
 ### `GET /api/reels/:id` — full reel detail
 Auth: optional.
