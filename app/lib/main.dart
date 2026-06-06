@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'pages/home_page.dart';
+import 'pages/login_page.dart';
+import 'pages/main_shell.dart';
+import 'state/app_state.dart';
+import 'theme.dart';
 
 void main() {
   runApp(const ThetaApp());
@@ -16,44 +19,83 @@ class ThetaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE1306C),
-          primary: const Color(0xFFE1306C),
-          secondary: const Color(0xFFF7AB3F),
-          surface: const Color(0xFFFFF8EC),
+          seedColor: accent,
+          primary: accent,
+          secondary: gold,
+          surface: paper,
         ),
-        scaffoldBackgroundColor: const Color(0xFFFFF4E0),
+        scaffoldBackgroundColor: bg,
         fontFamily: 'Helvetica',
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFFF4E0),
-          foregroundColor: Color(0xFF2F231A),
+          backgroundColor: bg,
+          foregroundColor: ink,
           elevation: 0,
           titleTextStyle: TextStyle(
-            color: Color(0xFF2F231A),
+            color: ink,
             fontSize: 24,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.8,
           ),
         ),
         cardTheme: CardThemeData(
-          color: const Color(0xFFFFF8EC),
+          color: paper,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(0),
-            side: const BorderSide(color: Color(0xFF2F231A), width: 2),
+            side: const BorderSide(color: ink, width: 2),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFE1306C),
+            backgroundColor: accent,
             foregroundColor: Colors.white,
             textStyle: const TextStyle(fontWeight: FontWeight.w900),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           ),
         ),
       ),
-      home: const HomePage(),
+      home: const AppRoot(),
+    );
+  }
+}
+
+/// Auth gate: boots [AppState], then shows the login page or the main shell.
+class AppRoot extends StatefulWidget {
+  const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  final _state = AppState();
+
+  @override
+  void initState() {
+    super.initState();
+    _state.bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _state.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _state,
+      builder: (context, _) {
+        if (!_state.bootstrapped) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return _state.loggedIn
+            ? MainShell(state: _state)
+            : LoginPage(state: _state);
+      },
     );
   }
 }

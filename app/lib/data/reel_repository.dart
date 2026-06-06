@@ -64,6 +64,17 @@ class ReelRepository {
     return token != null && token.isNotEmpty;
   }
 
+  Future<Map<String, dynamic>?> currentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_userKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> loginDev() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
@@ -76,13 +87,23 @@ class ReelRepository {
     await _storeSession(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  Future<void> loginWithGoogleIdToken(String idToken) async {
+  Future<void> register(String name, String email, String password) async {
     final response = await _request(
       'POST',
-      '/api/auth/google/native',
-      body: {'idToken': idToken},
+      '/api/auth/register',
+      body: {'name': name, 'email': email, 'password': password},
     );
-    _ensureOk(response, 'google login');
+    _ensureOk(response, 'register');
+    await _storeSession(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<void> loginWithEmail(String email, String password) async {
+    final response = await _request(
+      'POST',
+      '/api/auth/login',
+      body: {'email': email, 'password': password},
+    );
+    _ensureOk(response, 'login');
     await _storeSession(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
@@ -161,9 +182,14 @@ class ReelRepository {
 
   void _ensureOk(http.Response response, String action) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError(
-        '$action failed: ${response.statusCode} ${response.body}',
-      );
+      var detail = response.body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['message'] is String) {
+          detail = decoded['message'] as String;
+        }
+      } catch (_) {}
+      throw StateError('$action failed: $detail');
     }
   }
 
