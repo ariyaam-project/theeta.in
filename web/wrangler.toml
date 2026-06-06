@@ -8,4 +8,4 @@ binding = "ASSETS"
 directory = "./.output/public"
 
 [vars]
-NUXT_THETA_API_BASE = "https://api.theeta.in"
+NUXT_THETA_API_BASE = "https://auth.theeta.in"
