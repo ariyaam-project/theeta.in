@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   final _repo = ReelRepository();
   final _share = ShareService();
   StreamSubscription<InstagramLink>? _sub;
+  Future<void> _shareQueue = Future.value();
 
   List<Reel> _reels = [];
   bool _loading = true;
@@ -37,8 +38,12 @@ class _HomePageState extends State<HomePage> {
       _reels = reels;
       _loading = false;
     });
-    _sub = _share.links.listen(_onShared);
+    _sub = _share.links.listen(_queueShared);
     await _share.init();
+  }
+
+  void _queueShared(InstagramLink link) {
+    _shareQueue = _shareQueue.then((_) => _onShared(link));
   }
 
   Future<void> _onShared(InstagramLink link) async {
@@ -68,9 +73,9 @@ class _HomePageState extends State<HomePage> {
     final uri = Uri.parse(reel.url);
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open reel')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open reel')));
     }
   }
 
@@ -190,7 +195,10 @@ class _EmptyState extends StatelessWidget {
           children: [
             const Icon(Icons.movie_filter_outlined, size: 72),
             const SizedBox(height: 16),
-            Text('No reels yet', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'No reels yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Share an Instagram reel to Theta, or tap "Add reel" to paste a link.',

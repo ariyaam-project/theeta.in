@@ -1,5 +1,6 @@
 # Theta API — Hono on Cloudflare Workers, run locally via `wrangler dev` (workerd).
-FROM node:20-slim
+# Node 22+ required by wrangler v4.
+FROM node:22-slim
 
 WORKDIR /app
 
