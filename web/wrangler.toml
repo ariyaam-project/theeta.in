@@ -1,4 +1,4 @@
-name = "theta-web"
+name = "theta-web-v2"
 main = "./.output/server/index.mjs"
 compatibility_date = "2025-05-15"
 compatibility_flags = ["nodejs_compat"]
