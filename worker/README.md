@@ -19,10 +19,10 @@ The easiest path is from the repository root:
 cp .env.example .env
 # Fill OPENAI_API_KEY in .env
 docker compose up --build
-curl -X POST http://localhost:8787/api/reels \
+curl -X POST https://aerosol-reformer-twirl.ngrok-free.dev/api/reels \
   -H 'content-type: application/json' \
   -d '{"url":"https://www.instagram.com/reel/SHORTCODE/"}'
-curl http://localhost:8787/api/reels/REEL_ID/status
+curl https://aerosol-reformer-twirl.ngrok-free.dev/api/reels/REEL_ID/status
 ```
 
 Instagram may require a Netscape-format cookies file. Mount it into the
@@ -32,7 +32,7 @@ Important environment variables:
 
 | Variable | Default |
 |---|---|
-| `API_BASE_URL` | `http://localhost:8787` |
+| `API_BASE_URL` | `https://aerosol-reformer-twirl.ngrok-free.dev` |
 | `SERVICE_TOKEN` | `local-development-token` |
 | `POLL_ENABLED` | `false` |
 | `TRANSCRIPTION_PROVIDER` | `openai` |

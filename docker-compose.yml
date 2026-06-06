@@ -5,8 +5,8 @@
 #   docker compose up --build
 #   docker compose run --rm api npm run db:seed:local   # optional demo data
 #
-# API: http://localhost:8787
-# FastAPI worker: http://localhost:8001
+# API: https://aerosol-reformer-twirl.ngrok-free.dev
+# FastAPI worker: http://192.168.10.101:8001
 # Web test app: http://localhost:3000
 
 name: theta
@@ -25,7 +25,7 @@ services:
       # Injected into the Worker via --var (see apis/Dockerfile CMD), because
       # wrangler dev reads worker env from .dev.vars/[vars], not the container env.
       SERVICE_TOKEN: "${SERVICE_TOKEN:-local-development-token}"
-      APP_URL: "${APP_URL:-http://localhost:8787}"
+      APP_URL: "${APP_URL:-https://aerosol-reformer-twirl.ngrok-free.dev}"
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
       FASTAPI_WORKER_URL: "${FASTAPI_WORKER_URL:-http://transcription-worker:8000}"
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
@@ -92,7 +92,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      THETA_API_BASE: "${THETA_API_BASE:-http://localhost:8787}"
+      THETA_API_BASE: "${THETA_API_BASE:-https://aerosol-reformer-twirl.ngrok-free.dev}"
       NUXT_PUBLIC_CLARITY_ID: "${NUXT_PUBLIC_CLARITY_ID:-}"
     volumes:
       - ./web:/app

@@ -11,9 +11,9 @@ preview_database_id = "theta-local"
 
 # Local vars live in .dev.vars; production uses `wrangler secret put`.
 [vars]
-APP_URL = "http://localhost:8787"
+APP_URL = "https://aerosol-reformer-twirl.ngrok-free.dev"
 FRONTEND_URL = "http://localhost:3000"
-FASTAPI_WORKER_URL = "http://127.0.0.1:8001"
+FASTAPI_WORKER_URL = "http://192.168.10.101:8001"
 
 # Run `wrangler d1 create theta` and paste the real database_id above before deploying.
 # Uncomment when the bindings exist:

@@ -21,8 +21,14 @@ void main() {
     });
 
     test('handles /p/ and /tv/ links', () {
-      expect(parseInstagram('https://www.instagram.com/p/AAA/')?.shortcode, 'AAA');
-      expect(parseInstagram('https://www.instagram.com/tv/BBB/')?.shortcode, 'BBB');
+      expect(
+        parseInstagram('https://www.instagram.com/p/AAA/')?.shortcode,
+        'AAA',
+      );
+      expect(
+        parseInstagram('https://www.instagram.com/tv/BBB/')?.shortcode,
+        'BBB',
+      );
     });
 
     test('returns null for non-instagram text', () {
@@ -35,7 +41,9 @@ void main() {
     test('round-trips through json', () {
       final reel = Reel(
         id: 'ABC',
+        shortcode: 'ABC',
         url: 'https://www.instagram.com/reel/ABC/',
+        status: 'pending',
         addedAt: DateTime.parse('2026-06-06T10:00:00.000'),
         note: 'tasty',
       );

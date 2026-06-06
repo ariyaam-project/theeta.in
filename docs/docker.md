@@ -4,18 +4,18 @@
 
 The local compose stack runs the full development surface:
 
-- `api`: Hono API through `wrangler dev` with local D1 at `http://localhost:8787`
-- `transcription-worker`: FastAPI reel processor at `http://localhost:8001`
+- `api`: Hono API through `wrangler dev` with local D1 exposed through `https://aerosol-reformer-twirl.ngrok-free.dev`
+- `transcription-worker`: FastAPI reel processor at `http://192.168.10.101:8001`
 - `web`: Nuxt test app at `http://localhost:3000`
 
 ```bash
 cp .env.example .env
 # Fill OPENAI_API_KEY if you want real reel processing.
 # For Google login, keep:
-# APP_URL=http://localhost:8787
+# APP_URL=https://aerosol-reformer-twirl.ngrok-free.dev
 # FRONTEND_URL=http://localhost:3000
 # For push-triggered processing, keep:
-# FASTAPI_WORKER_URL=http://127.0.0.1:8001
+# FASTAPI_WORKER_URL=http://192.168.10.101:8001
 # POLL_ENABLED=false
 docker compose up --build
 ```
@@ -29,8 +29,8 @@ docker compose run --rm api npm run db:seed:local
 Health checks:
 
 ```bash
-curl http://localhost:8787/
-curl http://localhost:8001/health
+curl https://aerosol-reformer-twirl.ngrok-free.dev/
+curl http://192.168.10.101:8001/health
 ```
 
 ## Production

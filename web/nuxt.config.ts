@@ -5,9 +5,9 @@ export default defineNuxtConfig({
     appManifest: false
   },
   runtimeConfig: {
-    thetaApiBase: process.env.THETA_API_BASE || 'http://localhost:8787',
+    thetaApiBase: process.env.THETA_API_BASE || 'https://aerosol-reformer-twirl.ngrok-free.dev',
     public: {
-      thetaApiBase: process.env.THETA_API_BASE || 'http://localhost:8787',
+      thetaApiBase: process.env.THETA_API_BASE || 'https://aerosol-reformer-twirl.ngrok-free.dev',
       clarityId: process.env.NUXT_PUBLIC_CLARITY_ID || ''
     }
   },
