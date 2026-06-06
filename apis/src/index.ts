@@ -8,6 +8,7 @@ import { restaurantRoutes } from './routes/restaurants'
 import { surpriseRoutes } from './routes/surprise'
 import { listRoutes } from './routes/lists'
 import { saveRoutes } from './routes/saves'
+import { internalRoutes } from './routes/internal'
 
 const app = new Hono<AppEnv>()
 
@@ -20,6 +21,7 @@ app.route('/api/restaurants', restaurantRoutes)
 app.route('/api', surpriseRoutes)
 app.route('/api/lists', listRoutes)
 app.route('/api/saves', saveRoutes)
+app.route('/api/internal', internalRoutes)
 
 // Error shape matches the API contract: { statusCode, statusMessage, message }.
 app.onError((err, c) => {

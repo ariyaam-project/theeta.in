@@ -63,5 +63,7 @@ coverage/
 # ---- Misc ----
 *.tmp
 *.bak
+*.mp3
 
 # Note: Flutter lives in app/ and keeps its own app/.gitignore
+downloads

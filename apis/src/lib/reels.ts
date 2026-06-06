@@ -4,12 +4,18 @@ import type { AppEnv } from '../types'
 import { REEL_STEPS, type ReelStatus } from './constants'
 import { newId } from './crypto'
 
-const IG_REEL_RE = /instagram\.com\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)/i
+const IG_REEL_PATH_RE = /^\/(?:reel|reels|p|tv)\/([A-Za-z0-9_-]+)(?:\/|$)/i
 
 /** Extract the IG shortcode from a reel/post URL, or null if not an IG URL. */
 export function parseShortcode(rawUrl: string): string | null {
-  const match = IG_REEL_RE.exec(rawUrl.trim())
-  return match ? match[1] : null
+  try {
+    const url = new URL(rawUrl.trim())
+    if (url.protocol !== 'https:') return null
+    if (url.hostname !== 'instagram.com' && url.hostname !== 'www.instagram.com') return null
+    return IG_REEL_PATH_RE.exec(url.pathname)?.[1] || null
+  } catch {
+    return null
+  }
 }
 
 /** 1-based step number for a status, plus the total. */
