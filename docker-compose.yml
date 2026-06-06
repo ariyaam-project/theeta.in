@@ -1,0 +1,38 @@
+# Theta local stack. Currently one service: the Hono API (Cloudflare Worker via
+# wrangler dev + local D1). The FastAPI heavy worker will join as a second
+# service once built.
+#
+#   docker compose up --build        # start
+#   docker compose run --rm api npm run db:seed:local   # load demo data
+#
+# API: http://localhost:8787
+
+services:
+  api:
+    build:
+      context: ./apis
+      dockerfile: Dockerfile
+    image: theta-api
+    ports:
+      - "8787:8787"
+    environment:
+      CI: "true"
+      WRANGLER_SEND_METRICS: "false"
+    # Optional: provide Google OAuth + service token for auth flows.
+    # Copy apis/.dev.vars.example -> apis/.dev.vars, then uncomment:
+    # env_file:
+    #   - ./apis/.dev.vars
+    volumes:
+      - ./apis:/app          # live code
+      - api_node_modules:/app/node_modules   # keep image's installed deps
+      - d1_state:/app/.wrangler              # persist local D1 + seed
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8787/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  api_node_modules:
+  d1_state:

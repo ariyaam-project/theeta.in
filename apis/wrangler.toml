@@ -1,0 +1,26 @@
+name = "theta-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-15"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "theta"
+database_id = "00000000-0000-0000-0000-000000000000"
+preview_database_id = "theta-local"
+
+# Local vars live in .dev.vars; production uses `wrangler secret put`.
+[vars]
+APP_URL = "http://localhost:8787"
+
+# Run `wrangler d1 create theta` and paste the real database_id above before deploying.
+# Uncomment when the bindings exist:
+# [[r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "theta-media"
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "..."
+# [[queues.producers]]
+# binding = "REEL_QUEUE"
+# queue = "theta-reels"

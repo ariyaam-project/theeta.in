@@ -1,0 +1,67 @@
+# ---- OS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- IDE / Editors ----
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# ---- Env / Secrets ----
+.env
+.env.*
+!.env.example
+.dev.vars
+*.local
+secrets.*
+
+# ---- Python ----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.python-version
+
+# ---- Node / Nuxt / Cloudflare ----
+node_modules/
+.nuxt/
+.output/
+.nitro/
+.cache/
+.wrangler/
+dist-ssr/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---- Build artifacts (at any depth) ----
+build/
+dist/
+out/
+target/
+coverage/
+
+# ---- Misc ----
+*.tmp
+*.bak
+
+# Note: Flutter lives in app/ and keeps its own app/.gitignore
