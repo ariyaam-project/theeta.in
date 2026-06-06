@@ -3,7 +3,6 @@ const {
   user,
   pending,
   error,
-  devEmail,
   reelUrl,
   currentReelId,
   status,
@@ -14,7 +13,6 @@ const {
   polling,
   workerBase,
   loginWithGoogle,
-  devLogin,
   logout,
   saveReel,
   fetchStatus,
@@ -33,7 +31,6 @@ watch(user, () => {
 
 const statusLabel = computed(() => status.value?.status || 'No reel selected')
 const savedLabel = computed(() => status.value?.savedStatus || 'n/a')
-const detailJson = computed(() => (detail.value ? JSON.stringify(detail.value, null, 2) : 'Select a reel to inspect the stored metadata.'))
 const resolvedRestaurant = computed(() => detail.value?.reel.restaurant || null)
 const locationExtraction = computed(() => detail.value?.reel.locationExtraction || null)
 const selectedLocation = computed(() => {
@@ -87,21 +84,6 @@ function formatConfidence(value: number | null | undefined) {
               </p>
             </div>
           </div>
-
-          <div class="activity">
-            <span class="activity-title">Pipeline</span>
-            <div class="activity-grid">
-              <div v-for="column in 12" :key="column" class="activity-col">
-                <span
-                  v-for="row in 7"
-                  :key="`${column}-${row}`"
-                  class="activity-cell"
-                  :data-level="status ? Math.min(column % 5, 4) : 0"
-                  :data-today="column === 8 && row === 4"
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         <div v-if="error" class="error-banner">
@@ -115,18 +97,11 @@ function formatConfidence(value: number | null | undefined) {
           <div>
             <p class="section-kicker">Login required</p>
             <h3>Sign in to save reels</h3>
-            <p class="muted">Use dev login locally or Google OAuth from the Worker.</p>
+            <p class="muted">Sign in with Google to save and process reels.</p>
           </div>
-          <form class="inline-login" @submit.prevent="devLogin">
-            <input v-model="devEmail" type="email" placeholder="dev@theta.local" autocomplete="email" />
-            <button class="primary-button compact-button" type="submit" :disabled="loading">
-              Dev login
-            </button>
-            <button class="google-button compact-button" type="button" @click="loginWithGoogle">
-              <span class="google-mark">G</span>
-              Google
-            </button>
-          </form>
+          <button class="primary-button compact-button" type="button" @click="loginWithGoogle">
+            Sign in with Google
+          </button>
         </div>
 
         <div class="stats-grid">
@@ -257,14 +232,6 @@ function formatConfidence(value: number | null | undefined) {
             <strong>No saved reels loaded</strong>
             <span>{{ user ? 'Paste a reel URL above or reload saved reels.' : 'Login to see your saved reels.' }}</span>
           </div>
-        </div>
-
-        <div class="history">
-          <div class="history-head">
-            <h3>Reel detail</h3>
-            <span>raw API response</span>
-          </div>
-          <pre class="detail-json">{{ detailJson }}</pre>
         </div>
       </section>
     </div>

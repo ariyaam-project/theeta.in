@@ -37,7 +37,6 @@ watch(user, () => {
 
 const statusLabel = computed(() => status.value?.status || 'No reel selected')
 const savedLabel = computed(() => status.value?.savedStatus || 'n/a')
-const detailJson = computed(() => (detail.value ? JSON.stringify(detail.value, null, 2) : 'Select a processed reel to inspect the stored metadata.'))
 const resolvedRestaurant = computed(() => detail.value?.reel.restaurant || null)
 const locationExtraction = computed(() => detail.value?.reel.locationExtraction || null)
 const selectedLocation = computed(() => {
@@ -80,21 +79,6 @@ function formatConfidence(value: number | null | undefined) {
             <p class="section-kicker">Signed in</p>
             <h2>{{ user.displayName }}</h2>
             <p class="muted">{{ user.email }}</p>
-          </div>
-        </div>
-
-        <div class="activity">
-          <span class="activity-title">Pipeline</span>
-          <div class="activity-grid">
-            <div v-for="column in 12" :key="column" class="activity-col">
-              <span
-                v-for="row in 7"
-                :key="`${column}-${row}`"
-                class="activity-cell"
-                :data-level="status ? Math.min(column % 5, 4) : 0"
-                :data-today="column === 8 && row === 4"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -232,14 +216,6 @@ function formatConfidence(value: number | null | undefined) {
           <strong>No saved reels yet</strong>
           <span>Paste a reel URL above to create the first saved reel ref.</span>
         </div>
-      </div>
-
-      <div class="history">
-        <div class="history-head">
-          <h3>Reel detail</h3>
-          <span>raw API response</span>
-        </div>
-        <pre class="detail-json">{{ detailJson }}</pre>
       </div>
     </section>
   </div>

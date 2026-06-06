@@ -1,0 +1,11 @@
+name = "theta-web"
+main = "./.output/server/index.mjs"
+compatibility_date = "2025-05-15"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+binding = "ASSETS"
+directory = "./.output/public"
+
+[vars]
+NUXT_THETA_API_BASE = "https://api.theeta.in"
