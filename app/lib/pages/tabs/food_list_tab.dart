@@ -79,9 +79,15 @@ class _FoodListTabState extends State<FoodListTab> {
               SectionTitle(
                 title: 'Saved reels',
                 subtitle: reels.isEmpty
-                    ? 'Nothing yet — add your first spot above.'
-                    : 'Pull to refresh processing status.',
+                    ? (_state.mineOnly
+                          ? 'No saves from you yet — add your first spot above.'
+                          : 'Nothing saved yet — add the first spot above.')
+                    : (_state.mineOnly
+                          ? 'Your saves. Pull to refresh.'
+                          : 'Saved by everyone. Pull to refresh.'),
               ),
+              const SizedBox(height: 10),
+              _filterRow(),
               const SizedBox(height: 12),
               if (reels.isEmpty)
                 const _EmptyState()
@@ -101,6 +107,25 @@ class _FoodListTabState extends State<FoodListTab> {
           ),
         );
       },
+    );
+  }
+
+  Widget _filterRow() {
+    final mineOnly = _state.mineOnly;
+    return Row(
+      children: [
+        ChoiceChip(
+          label: const Text('Everyone'),
+          selected: !mineOnly,
+          onSelected: _state.busy ? null : (_) => _state.setMineOnly(false),
+        ),
+        const SizedBox(width: 8),
+        ChoiceChip(
+          label: const Text('Saved by me'),
+          selected: mineOnly,
+          onSelected: _state.busy ? null : (_) => _state.setMineOnly(true),
+        ),
+      ],
     );
   }
 

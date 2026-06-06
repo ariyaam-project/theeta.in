@@ -23,12 +23,12 @@ class ReelRepository {
     : _client = client ?? http.Client(),
       apiBase = apiBase ?? _defaultApiBase();
 
-  Future<List<Reel>> load() async {
+  Future<List<Reel>> load({bool mineOnly = false}) async {
     try {
       final token = await _token();
       final response = await _request(
         'GET',
-        '/api/reels/saved/list',
+        mineOnly ? '/api/reels/saved/list?mine=true' : '/api/reels/saved/list',
         token: token,
       );
       _ensureOk(response, 'load saved reels');

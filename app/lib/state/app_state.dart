@@ -17,6 +17,9 @@ class AppState extends ChangeNotifier {
   bool busy = false;
   String? error;
 
+  /// false = show reels saved by anyone; true = only the current user's saves.
+  bool mineOnly = false;
+
   String get displayName => (user?['displayName'] as String?) ?? 'You';
   String get email => (user?['email'] as String?) ?? '';
 
@@ -37,10 +40,21 @@ class AppState extends ChangeNotifier {
 
   Future<List<Reel>> _safeLoad() async {
     try {
-      return await repo.load();
+      return await repo.load(mineOnly: mineOnly);
     } catch (_) {
       return reels;
     }
+  }
+
+  /// Toggle between everyone's saves and only mine, then reload.
+  Future<void> setMineOnly(bool value) async {
+    if (mineOnly == value) return;
+    mineOnly = value;
+    busy = true;
+    notifyListeners();
+    reels = await _safeLoad();
+    busy = false;
+    notifyListeners();
   }
 
   Future<bool> _auth(Future<void> Function() action, String label) async {
@@ -103,7 +117,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshAll() async {
     try {
-      var list = await repo.load();
+      var list = await repo.load(mineOnly: mineOnly);
       for (final reel in list.where((r) => r.isProcessing).toList()) {
         final fresh = await repo.refresh(reel);
         if (fresh != null) {

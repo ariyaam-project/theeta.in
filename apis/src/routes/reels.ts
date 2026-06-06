@@ -83,22 +83,30 @@ reelRoutes.get('/saved/list', async (c) => {
   const user = await requireCurrentUser(c)
   const db = getDb(c)
   await ensureSchema(db)
-  const rows = await db
-    .prepare(
-      `SELECT sr.status AS saved_status, sr.created_at AS saved_at,
-              r.id, r.ig_shortcode, r.url, r.status, r.caption, r.thumbnail_url, r.created_at,
-              rest.id AS restaurant_id, rest.slug AS restaurant_slug, rest.name AS restaurant_name,
-              rest.address AS restaurant_address, rest.area AS restaurant_area, rest.city AS restaurant_city,
-              rest.lat AS restaurant_lat, rest.lng AS restaurant_lng, rr.confidence AS restaurant_confidence
-       FROM saved_reels sr
-       JOIN reels r ON r.id = sr.reel_id
-       LEFT JOIN restaurant_reels rr ON rr.reel_id = r.id
-       LEFT JOIN restaurants rest ON rest.id = rr.restaurant_id
-       WHERE sr.user_id = ?
-       ORDER BY sr.created_at DESC`
-    )
-    .bind(user.id)
-    .all<any>()
+
+  // Default: reels saved by anyone (deduped to the latest save per reel).
+  // `?mine=true` restricts to the current user's saves.
+  const mine = ['1', 'true', 'yes'].includes((c.req.query('mine') || '').toLowerCase())
+
+  const statement = db.prepare(
+    `SELECT sub.saved_status, sub.saved_at,
+            r.id, r.ig_shortcode, r.url, r.status, r.caption, r.thumbnail_url, r.created_at,
+            rest.id AS restaurant_id, rest.slug AS restaurant_slug, rest.name AS restaurant_name,
+            rest.address AS restaurant_address, rest.area AS restaurant_area, rest.city AS restaurant_city,
+            rest.lat AS restaurant_lat, rest.lng AS restaurant_lng, rr.confidence AS restaurant_confidence
+     FROM (
+       SELECT reel_id, status AS saved_status, created_at AS saved_at,
+              ROW_NUMBER() OVER (PARTITION BY reel_id ORDER BY created_at DESC) AS rn
+       FROM saved_reels
+       ${mine ? 'WHERE user_id = ?' : ''}
+     ) sub
+     JOIN reels r ON r.id = sub.reel_id
+     LEFT JOIN restaurant_reels rr ON rr.reel_id = r.id
+     LEFT JOIN restaurants rest ON rest.id = rr.restaurant_id
+     WHERE sub.rn = 1
+     ORDER BY sub.saved_at DESC`
+  )
+  const rows = await (mine ? statement.bind(user.id) : statement).all<any>()
 
   return c.json({
     items: rows.results.map((row) => ({
