@@ -24,6 +24,7 @@ function initial(name: string) {
     <Transition name="pop">
       <div v-if="open" class="profile-dropdown">
         <NuxtLink class="profile-link" to="/dashboard" @click="open = false">Dashboard</NuxtLink>
+        <NuxtLink class="profile-link" to="/profile" @click="open = false">Profile</NuxtLink>
         <button class="profile-link" type="button" @click="open = false; emit('logout')">Sign out</button>
       </div>
     </Transition>

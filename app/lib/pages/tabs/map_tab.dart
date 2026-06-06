@@ -53,8 +53,10 @@ class MapTab extends StatelessWidget {
               ),
               children: [
                 TileLayer(
+                  // Stylised, illustrative basemap (CARTO Voyager) — no API key.
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'in.theeta.app',
                 ),
                 MarkerLayer(markers: markers),
@@ -134,6 +136,22 @@ class MapTab extends StatelessWidget {
                 label: const Text('Open reel'),
               ),
             ),
+            if (spot?.lat != null && spot?.lng != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => launchUrl(
+                    Uri.parse(
+                      'https://www.google.com/maps/search/?api=1&query=${spot!.lat},${spot.lng}',
+                    ),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Open in Google Maps'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

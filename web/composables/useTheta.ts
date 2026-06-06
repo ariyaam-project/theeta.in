@@ -77,6 +77,7 @@ export async function useTheta() {
   const config = useRuntimeConfig()
   const reelUrl = ref('')
   const devEmail = ref('dev@theta.local')
+  const mineOnly = ref(false)
   const currentReelId = ref('')
   const status = ref<ReelStatus | null>(null)
   const detail = ref<ReelDetail | null>(null)
@@ -105,10 +106,53 @@ export async function useTheta() {
     })
   }
 
+  // Pull the API's `{ message }` out of a failed $fetch error, if present.
+  function apiMessage(error: any): string {
+    const data = error?.data
+    if (data && typeof data.message === 'string') return data.message
+    return ''
+  }
+
   function loginWithGoogle() {
     // Same-origin redirect; the Nuxt server route forwards to the API worker
     // using the runtime API base (see server/routes/auth/google.get.ts).
     window.location.href = '/auth/google'
+  }
+
+  async function loginEmail(email: string, password: string) {
+    actionError.value = ''
+    loading.value = true
+    try {
+      await api<{ user: AuthUser }>('/auth/login', {
+        method: 'POST',
+        body: { email, password }
+      })
+      await refresh()
+      return true
+    } catch (e: any) {
+      actionError.value = apiMessage(e) || 'Login failed. Check your email and password.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function registerEmail(name: string, email: string, password: string) {
+    actionError.value = ''
+    loading.value = true
+    try {
+      await api<{ user: AuthUser }>('/auth/register', {
+        method: 'POST',
+        body: { name, email, password }
+      })
+      await refresh()
+      return true
+    } catch (e: any) {
+      actionError.value = apiMessage(e) || 'Could not create the account.'
+      return false
+    } finally {
+      loading.value = false
+    }
   }
 
   async function devLogin() {
@@ -179,8 +223,15 @@ export async function useTheta() {
 
   async function loadSavedReels() {
     if (!user.value) return
-    const response = await api<{ items: SavedReel[] }>('/reels/saved/list')
+    const query = mineOnly.value ? '?mine=true' : ''
+    const response = await api<{ items: SavedReel[] }>(`/reels/saved/list${query}`)
     savedReels.value = response.items
+  }
+
+  async function setMineOnly(value: boolean) {
+    if (mineOnly.value === value) return
+    mineOnly.value = value
+    await loadSavedReels().catch(() => {})
   }
 
   function selectSaved(item: SavedReel) {
@@ -221,6 +272,7 @@ export async function useTheta() {
     error,
     reelUrl,
     devEmail,
+    mineOnly,
     currentReelId,
     status,
     detail,
@@ -230,7 +282,10 @@ export async function useTheta() {
     polling,
     workerBase,
     loginWithGoogle,
+    loginEmail,
+    registerEmail,
     devLogin,
+    setMineOnly,
     logout,
     saveReel,
     fetchStatus,

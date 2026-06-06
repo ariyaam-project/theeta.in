@@ -12,7 +12,6 @@ const {
   loading,
   polling,
   workerBase,
-  loginWithGoogle,
   logout,
   saveReel,
   fetchStatus,
@@ -23,8 +22,10 @@ const {
   stopPolling
 } = await useTheta()
 
+// Logged-in users go straight to the app shell.
 watch(user, () => {
   if (user.value) {
+    navigateTo('/dashboard')
     loadSavedReels().catch(() => {})
   }
 }, { immediate: true })
@@ -69,7 +70,7 @@ function formatConfidence(value: number | null | undefined) {
           <span class="brand-name">theeta.in</span>
         </a>
         <ProfileMenu v-if="user" :user="user" @logout="logout" />
-        <button v-else class="nav-cta" type="button" @click="loginWithGoogle">SIGN IN</button>
+        <button v-else class="nav-cta" type="button" @click="navigateTo('/login')">SIGN IN</button>
       </header>
 
       <section class="workspace dashboard">
@@ -97,10 +98,10 @@ function formatConfidence(value: number | null | undefined) {
           <div>
             <p class="section-kicker">Login required</p>
             <h3>Sign in to save reels</h3>
-            <p class="muted">Sign in with Google to save and process reels.</p>
+            <p class="muted">Create an account or log in to save and process reels.</p>
           </div>
-          <button class="primary-button compact-button" type="button" @click="loginWithGoogle">
-            Sign in with Google
+          <button class="primary-button compact-button" type="button" @click="navigateTo('/login')">
+            Sign in
           </button>
         </div>
 

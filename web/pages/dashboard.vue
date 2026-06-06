@@ -4,6 +4,7 @@ const {
   pending,
   error,
   reelUrl,
+  mineOnly,
   currentReelId,
   status,
   detail,
@@ -13,6 +14,7 @@ const {
   polling,
   logout,
   saveReel,
+  setMineOnly,
   fetchStatus,
   fetchDetail,
   loadSavedReels,
@@ -22,11 +24,11 @@ const {
 } = await useTheta()
 
 if (!pending.value && !user.value) {
-  await navigateTo('/')
+  await navigateTo('/login')
 }
 
 watch(user, () => {
-  if (!user.value) navigateTo('/')
+  if (!user.value) navigateTo('/login')
 })
 
 watch(user, () => {
@@ -63,13 +65,7 @@ function formatConfidence(value: number | null | undefined) {
 
 <template>
   <div v-if="user">
-    <header class="dash-nav">
-      <a class="brand-mark" href="/" aria-label="Theeta home">
-        <img src="/images/logo.png" alt="Theeta" />
-        <span class="brand-name">theeta.in</span>
-      </a>
-      <ProfileMenu :user="user" @logout="logout" />
-    </header>
+    <AppNav :user="user" @logout="logout" />
 
     <section class="workspace dashboard">
       <div class="top-row">
@@ -194,7 +190,25 @@ function formatConfidence(value: number | null | undefined) {
       <div class="history">
         <div class="history-head">
           <h3>Saved reels</h3>
-          <button class="ghost-button compact-button" type="button" @click="loadSavedReels">Reload</button>
+          <div class="filter-chips">
+            <button
+              class="chip"
+              type="button"
+              :data-active="!mineOnly"
+              @click="setMineOnly(false)"
+            >
+              Everyone
+            </button>
+            <button
+              class="chip"
+              type="button"
+              :data-active="mineOnly"
+              @click="setMineOnly(true)"
+            >
+              Saved by me
+            </button>
+            <button class="ghost-button compact-button" type="button" @click="loadSavedReels">Reload</button>
+          </div>
         </div>
 
         <TransitionGroup v-if="savedReels.length" name="list" tag="ul">
