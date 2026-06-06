@@ -15,6 +15,7 @@ preview_database_id = "theta-local"
 APP_URL = "https://auth.theeta.in"
 FRONTEND_URL = "https://theeta.in"
 FASTAPI_WORKER_URL = "https://api.theeta.in"
+COOKIE_DOMAIN = ".theeta.in"
 GOOGLE_CLIENT_ID = "692553043515-2v7s88v0u3i5h0ib2oi9mj18796lkdsb.apps.googleusercontent.com"
 
 [[routes]]

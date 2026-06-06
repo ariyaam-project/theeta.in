@@ -7,6 +7,7 @@ export type Bindings = {
   REEL_QUEUE?: Queue
   APP_URL: string
   FRONTEND_URL?: string
+  COOKIE_DOMAIN?: string
   FASTAPI_WORKER_URL?: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string

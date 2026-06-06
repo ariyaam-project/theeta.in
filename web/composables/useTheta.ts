@@ -106,7 +106,9 @@ export async function useTheta() {
   }
 
   function loginWithGoogle() {
-    window.location.href = `${workerBase.value}/api/auth/google`
+    // Same-origin redirect; the Nuxt server route forwards to the API worker
+    // using the runtime API base (see server/routes/auth/google.get.ts).
+    window.location.href = '/auth/google'
   }
 
   async function devLogin() {

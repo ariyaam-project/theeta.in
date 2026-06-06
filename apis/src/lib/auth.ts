@@ -32,6 +32,20 @@ function secureCookies(c: Context<AppEnv>) {
 }
 
 /**
+ * Session cookie options. COOKIE_DOMAIN (e.g. `.theeta.in`) scopes the cookie to
+ * the parent domain so the web app on a sibling subdomain can read it.
+ */
+function sessionCookieOpts(c: Context<AppEnv>) {
+  return {
+    httpOnly: true,
+    sameSite: 'Lax' as const,
+    secure: secureCookies(c),
+    path: '/',
+    ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {})
+  }
+}
+
+/**
  * Create a session row. Returns the raw token + expiry. Web callers also get
  * the cookie; mobile callers use the returned token as a bearer credential.
  */
@@ -49,10 +63,7 @@ export async function createAuthSession(c: Context<AppEnv>, userId: string) {
     .run()
 
   setCookie(c, SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'Lax',
-    secure: secureCookies(c),
-    path: '/',
+    ...sessionCookieOpts(c),
     maxAge: SESSION_TTL_SECONDS
   })
 
@@ -156,7 +167,11 @@ export async function getCurrentUser(c: Context<AppEnv>): Promise<AuthUser | nul
     .first<UserRow>()
 
   if (!row) {
-    if (getCookie(c, SESSION_COOKIE)) deleteCookie(c, SESSION_COOKIE, { path: '/' })
+    if (getCookie(c, SESSION_COOKIE))
+    deleteCookie(c, SESSION_COOKIE, {
+      path: '/',
+      ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {})
+    })
     return null
   }
 
@@ -178,7 +193,11 @@ export async function clearAuthSession(c: Context<AppEnv>) {
     await ensureSchema(db)
     await db.prepare('DELETE FROM auth_sessions WHERE token_hash = ?').bind(tokenHash).run()
   }
-  if (getCookie(c, SESSION_COOKIE)) deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  if (getCookie(c, SESSION_COOKIE))
+    deleteCookie(c, SESSION_COOKIE, {
+      path: '/',
+      ...(c.env.COOKIE_DOMAIN ? { domain: c.env.COOKIE_DOMAIN } : {})
+    })
 }
 
 function mapUser(row: UserRow): AuthUser {
