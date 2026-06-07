@@ -18,7 +18,8 @@ export default defineNuxtConfig({
   googleFonts: {
     families: {
       Inter: [400, 500, 600, 700, 800],
-      'Bungee Shade': [400]
+      'Bungee Shade': [400],
+      Fraunces: [400, 500, 600, 700, 900]
     },
     display: 'swap'
   },

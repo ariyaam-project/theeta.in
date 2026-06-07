@@ -10,6 +10,8 @@ export type ReelSummary = {
   shortcode: string
   url: string
   status: string
+  isFood?: boolean
+  rejectionReason?: string | null
   caption: string | null
   thumbnailUrl: string | null
   createdAt: string
@@ -45,6 +47,19 @@ export type LocationExtraction = {
   resolutionStatus: string | null
 }
 
+export type CommentAnalysis = {
+  analyzedCount: number
+  positiveCount: number
+  negativeCount: number
+  neutralCount: number
+  sentimentScore: number | null
+  commonPraise: string[]
+  commonComplaints: string[]
+  sponsoredSignal: boolean
+  authenticityNote: string | null
+  verdict: string | null
+}
+
 export type ReelDetail = {
   reel: ReelSummary & {
     postedAt?: string | null
@@ -53,6 +68,7 @@ export type ReelDetail = {
     creator?: unknown
     transcript?: string | null
     locationExtraction?: LocationExtraction | null
+    commentAnalysis?: CommentAnalysis | null
   }
 }
 
@@ -66,6 +82,8 @@ export type SavedReel = {
 export type ReelStatus = {
   id: string
   status: string
+  isFood?: boolean
+  rejectionReason?: string | null
   savedStatus?: string
   step?: number
   totalSteps?: number

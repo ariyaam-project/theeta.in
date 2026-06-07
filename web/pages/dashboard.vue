@@ -56,6 +56,15 @@ const selectedLocation = computed(() => {
   }
 })
 const hasSelectedLocation = computed(() => Boolean(selectedLocation.value.name || selectedLocation.value.address))
+const notFood = computed(() => detail.value?.reel.isFood === false)
+const rejectionReason = computed(() => detail.value?.reel.rejectionReason || 'This reel is not about a food spot, so processing was skipped.')
+const commentAnalysis = computed(() => detail.value?.reel.commentAnalysis || null)
+
+function formatSentiment(value: number | null | undefined) {
+  if (typeof value !== 'number') return 'n/a'
+  const label = value > 0.3 ? 'Positive' : value < -0.3 ? 'Negative' : 'Mixed'
+  return `${label} (${value.toFixed(2)})`
+}
 
 function formatConfidence(value: number | null | undefined) {
   if (typeof value !== 'number') return 'n/a'
@@ -109,15 +118,20 @@ function formatConfidence(value: number | null | undefined) {
         </article>
       </div>
 
-      <div class="location-card" :data-empty="!hasSelectedLocation">
-        <div>
+      <div class="location-card" :data-empty="notFood || !hasSelectedLocation">
+        <div v-if="notFood">
+          <p class="section-kicker">Not a food reel</p>
+          <h3>Skipped</h3>
+          <p class="muted">{{ rejectionReason }}</p>
+        </div>
+        <div v-else>
           <p class="section-kicker">AI resolved location</p>
           <h3>{{ selectedLocation.name || 'No exact location yet' }}</h3>
           <p class="muted">
             {{ selectedLocation.address || 'The worker will show the address here after AI extraction returns a specific place.' }}
           </p>
         </div>
-        <dl v-if="hasSelectedLocation" class="location-grid">
+        <dl v-if="!notFood && hasSelectedLocation" class="location-grid">
           <div>
             <dt>Area</dt>
             <dd>{{ selectedLocation.area || '-' }}</dd>
@@ -144,6 +158,38 @@ function formatConfidence(value: number | null | undefined) {
             <dd>{{ selectedLocation.status || '-' }}</dd>
           </div>
         </dl>
+      </div>
+
+      <div v-if="commentAnalysis" class="location-card" data-empty="true">
+        <div>
+          <p class="section-kicker">Comment analysis</p>
+          <h3>{{ commentAnalysis.verdict || 'Audience reaction' }}</h3>
+          <p class="muted">
+            {{ commentAnalysis.analyzedCount }} comments ·
+            👍 {{ commentAnalysis.positiveCount }} ·
+            👎 {{ commentAnalysis.negativeCount }} ·
+            😐 {{ commentAnalysis.neutralCount }}
+            <template v-if="commentAnalysis.sponsoredSignal"> · ⚠ sponsored signal</template>
+          </p>
+          <dl class="location-grid">
+            <div>
+              <dt>Common praise</dt>
+              <dd>{{ commentAnalysis.commonPraise.length ? commentAnalysis.commonPraise.join(', ') : '-' }}</dd>
+            </div>
+            <div>
+              <dt>Common complaints</dt>
+              <dd>{{ commentAnalysis.commonComplaints.length ? commentAnalysis.commonComplaints.join(', ') : '-' }}</dd>
+            </div>
+            <div>
+              <dt>Sentiment</dt>
+              <dd>{{ formatSentiment(commentAnalysis.sentimentScore) }}</dd>
+            </div>
+            <div>
+              <dt>Authenticity</dt>
+              <dd>{{ commentAnalysis.authenticityNote || '-' }}</dd>
+            </div>
+          </dl>
+        </div>
       </div>
 
       <div class="log-cta">
@@ -220,6 +266,7 @@ function formatConfidence(value: number | null | undefined) {
                 {{ item.reel.restaurant.name }}
                 <template v-if="item.reel.restaurant.city"> · {{ item.reel.restaurant.city }}</template>
               </small>
+              <small v-else-if="item.reel.isFood === false">Not a food reel</small>
               <small v-else-if="item.reel.status === 'complete'">Location needs review</small>
             </button>
             <b>{{ new Date(item.savedAt).toLocaleDateString() }}</b>
