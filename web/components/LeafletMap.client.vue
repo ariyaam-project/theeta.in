@@ -36,6 +36,39 @@ async function ensureLeaflet(): Promise<any> {
   return (window as any).L
 }
 
+// Grey out everything outside the Kerala border using an inverse polygon
+// (world outer ring + Kerala hole). Loaded once from the embedded GeoJSON.
+async function addKeralaMask(L: any) {
+  try {
+    const res = await fetch('/kerala.geojson')
+    const geo = await res.json()
+    const ring: [number, number][] = geo.geometry.coordinates[0].map(
+      ([lng, lat]: [number, number]) => [lat, lng]
+    )
+    const world: [number, number][] = [
+      [-85, -180],
+      [-85, 180],
+      [85, 180],
+      [85, -180]
+    ]
+    L.polygon([world, ring], {
+      pane: 'keralaMask',
+      stroke: false,
+      fillColor: '#eef0e6',
+      fillOpacity: 1,
+      interactive: false
+    }).addTo(map)
+    L.polyline([...ring, ring[0]], {
+      pane: 'keralaMask',
+      color: '#14241a',
+      weight: 2,
+      interactive: false
+    }).addTo(map)
+  } catch {
+    // GeoJSON missing → skip mask, map still works
+  }
+}
+
 function render(L: any) {
   if (!host.value) return
   if (!map) {
@@ -50,10 +83,24 @@ function render(L: any) {
       minZoom: 6
     }).setView([10.5, 76.2], props.spots.length ? 9 : 7)
     // Stylised, illustrative basemap (CARTO Voyager) — no API key needed.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
       attribution: '© OpenStreetMap, © CARTO',
       maxZoom: 20
+    }).addTo(map)
+    // Dedicated pane for the Kerala mask: above tiles (200), below markers (400).
+    map.createPane('keralaMask')
+    map.getPane('keralaMask').style.zIndex = '350'
+    addKeralaMask(L)
+    // Labels overlay ABOVE the mask so place names are never greyed out.
+    map.createPane('labels')
+    const labelPane = map.getPane('labels')
+    labelPane.style.zIndex = '360'
+    labelPane.style.pointerEvents = 'none'
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      pane: 'labels'
     }).addTo(map)
   }
   if (layer) layer.remove()
