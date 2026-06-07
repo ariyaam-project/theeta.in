@@ -78,7 +78,7 @@ OpenAI is both **inside the product** and **part of how we built it**.
 
 ## Demo
 
-> 📹 Demo / pitch video: _add link here_
+> 📹 Demo / pitch video: https://youtu.be/76G8lcsmO0k
 
 ## Screenshots
 
