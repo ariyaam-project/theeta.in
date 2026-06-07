@@ -67,7 +67,10 @@ class _MainShellState extends State<MainShell> {
     final tabs = [
       FoodListTab(
         state: _state,
-        onOpenMap: () => setState(() => _index = _mapTab),
+        onOpenMap: () {
+          setState(() => _index = _mapTab);
+          _state.refreshAll();
+        },
       ),
       MapTab(state: _state),
       AnalyticsTab(state: _state),
@@ -91,7 +94,11 @@ class _MainShellState extends State<MainShell> {
         ),
         child: BottomNavigationBar(
           currentIndex: _index,
-          onTap: (i) => setState(() => _index = i),
+          onTap: (i) {
+            setState(() => _index = i);
+            // Refresh spot data whenever the Map tab is opened.
+            if (i == _mapTab) _state.refreshAll();
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: paper,
           elevation: 0,

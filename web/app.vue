@@ -909,10 +909,21 @@ li b {
   -webkit-background-clip: text;
   background-clip: text;
   font-family: "Bungee Shade", Inter, ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(5.5rem, 19vw, 17rem);
+  font-size: clamp(3rem, 16vw, 17rem);
   font-weight: 400;
   line-height: 0.74;
   white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .site-footer {
+    min-height: 230px;
+  }
+
+  .site-footer > strong {
+    bottom: -16px;
+  }
 }
 
 /* Transitions */

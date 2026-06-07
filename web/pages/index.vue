@@ -599,7 +599,7 @@ const features = [
   padding: 30px 26px;
   border-radius: 26px;
   text-align: left;
-  box-shadow: 0 26px 46px -30px rgba(44, 43, 58, 0.45);
+  box-shadow: 0 14px 30px -24px rgba(44, 43, 58, 0.3);
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
@@ -620,7 +620,7 @@ const features = [
 
 .edu-story-card:hover {
   transform: rotate(0deg) translateY(-5px);
-  box-shadow: 0 34px 56px -28px rgba(44, 43, 58, 0.5);
+  box-shadow: 0 20px 38px -26px rgba(44, 43, 58, 0.35);
 }
 
 .edu-story-emoji {
@@ -897,15 +897,36 @@ const features = [
 
 @media (max-width: 720px) {
   .edu-nav {
-    flex-wrap: wrap;
-    padding: 18px 22px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
   }
 
+  /* Keep the header on one line — drop the in-page anchors on small screens. */
   .edu-links {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin: 6px 0 0;
+    display: none;
+  }
+
+  .edu-brand img {
+    height: 30px;
+  }
+
+  .edu-brand span {
+    font-size: 1.2rem;
+  }
+
+  .edu-actions {
+    gap: 10px;
+  }
+
+  .edu-login {
+    font-size: 0.95rem;
+  }
+
+  .edu-pill-outline {
+    padding: 10px 16px;
+    font-size: 0.95rem;
   }
 
   .edu-hero,
