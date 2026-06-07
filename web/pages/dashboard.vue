@@ -1,26 +1,19 @@
 <script setup lang="ts">
+import type { SavedReel } from '~/composables/useTheta'
+
 const {
   user,
   pending,
   error,
   reelUrl,
   mineOnly,
-  currentReelId,
-  status,
-  detail,
   savedReels,
   actionError,
   loading,
-  polling,
   logout,
   saveReel,
   setMineOnly,
-  fetchStatus,
-  fetchDetail,
-  loadSavedReels,
-  selectSaved,
-  startPolling,
-  stopPolling
+  loadSavedReels
 } = await useTheta()
 
 if (!pending.value && !user.value) {
@@ -29,254 +22,208 @@ if (!pending.value && !user.value) {
 
 watch(user, () => {
   if (!user.value) navigateTo('/login')
-})
-
-watch(user, () => {
-  if (user.value) {
-    loadSavedReels().catch(() => {})
-  }
 }, { immediate: true })
 
-const statusLabel = computed(() => status.value?.status || 'No reel selected')
-const savedLabel = computed(() => status.value?.savedStatus || 'n/a')
-const resolvedRestaurant = computed(() => detail.value?.reel.restaurant || null)
-const locationExtraction = computed(() => detail.value?.reel.locationExtraction || null)
-const selectedLocation = computed(() => {
-  const restaurant = resolvedRestaurant.value
-  const extraction = locationExtraction.value
-  return {
-    name: restaurant?.name || extraction?.restaurantName || null,
-    address: restaurant?.address || extraction?.suggestedAddress || null,
-    area: restaurant?.area || extraction?.area || null,
-    city: restaurant?.city || extraction?.city || null,
-    lat: restaurant?.lat ?? extraction?.suggestedLat ?? null,
-    lng: restaurant?.lng ?? extraction?.suggestedLng ?? null,
-    confidence: restaurant?.confidence ?? extraction?.suggestedLocationConfidence ?? extraction?.confidence ?? null,
-    status: extraction?.resolutionStatus || (restaurant ? 'ai_suggested' : null)
-  }
+watch(user, () => {
+  if (user.value) loadSavedReels().catch(() => {})
+}, { immediate: true })
+
+const firstName = computed(() => (user.value?.displayName || 'there').split(' ')[0])
+
+const isLocated = (item: SavedReel) =>
+  !!item.reel.restaurant && item.reel.restaurant.lat != null && item.reel.restaurant.lng != null
+const isDone = (item: SavedReel) =>
+  item.reel.status === 'complete' || item.reel.status === 'failed' || item.reel.isFood === false
+const isProcessing = (item: SavedReel) => !isDone(item)
+
+const saved = computed(() => savedReels.value.length)
+const onMap = computed(() => savedReels.value.filter(isLocated).length)
+const resolving = computed(() => savedReels.value.filter(isProcessing).length)
+
+function badge(item: SavedReel) {
+  if (item.reel.isFood === false) return { label: 'Not food', state: 'skip' }
+  if (isLocated(item)) return { label: 'Resolved', state: 'done' }
+  if (item.reel.status === 'complete') return { label: 'Needs review', state: 'review' }
+  return { label: 'Resolving…', state: 'pending' }
+}
+
+function subtitle(item: SavedReel) {
+  const r = item.reel.restaurant
+  if (r) return [r.area, r.city].filter(Boolean).join(' · ') || item.reel.shortcode
+  if (item.reel.isFood === false) return 'This reel is not about a food spot'
+  return 'AI is finding the restaurant…'
+}
+
+async function add() {
+  const url = reelUrl.value.trim()
+  if (!url) return
+  await saveReel()
+  if (!actionError.value) reelUrl.value = ''
+}
+
+// Quietly keep processing reels fresh.
+let timer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  timer = setInterval(() => {
+    if (user.value && savedReels.value.some(isProcessing)) {
+      loadSavedReels().catch(() => {})
+    }
+  }, 6000)
 })
-const hasSelectedLocation = computed(() => Boolean(selectedLocation.value.name || selectedLocation.value.address))
-const notFood = computed(() => detail.value?.reel.isFood === false)
-const rejectionReason = computed(() => detail.value?.reel.rejectionReason || 'This reel is not about a food spot, so processing was skipped.')
-const commentAnalysis = computed(() => detail.value?.reel.commentAnalysis || null)
-
-function formatSentiment(value: number | null | undefined) {
-  if (typeof value !== 'number') return 'n/a'
-  const label = value > 0.3 ? 'Positive' : value < -0.3 ? 'Negative' : 'Mixed'
-  return `${label} (${value.toFixed(2)})`
-}
-
-function formatConfidence(value: number | null | undefined) {
-  if (typeof value !== 'number') return 'n/a'
-  return `${Math.round(value * 100)}%`
-}
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+})
 </script>
 
 <template>
   <div v-if="user">
     <AppNav :user="user" @logout="logout" />
 
-    <section class="workspace dashboard">
-      <div class="top-row">
-        <div class="profile-head">
-          <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="`${user.displayName} avatar`" referrerpolicy="no-referrer" />
-          <div>
-            <p class="section-kicker">Signed in</p>
-            <h2>{{ user.displayName }}</h2>
-            <p class="muted">{{ user.email }}</p>
-          </div>
+    <section class="workspace">
+      <div class="profile-head">
+        <img
+          v-if="user.avatarUrl"
+          :src="user.avatarUrl"
+          :alt="user.displayName"
+          referrerpolicy="no-referrer"
+        />
+        <div>
+          <p class="section-kicker">Welcome back</p>
+          <h2>Hey, {{ firstName }}</h2>
+          <p class="muted">{{ user.email }}</p>
         </div>
       </div>
 
       <div v-if="error" class="error-banner">
-        Could not sync auth state. Make sure the Worker is running.
+        Could not reach the server. Try again in a moment.
       </div>
-      <div v-if="actionError" class="error-banner">
-        {{ actionError }}
-      </div>
+      <div v-if="actionError" class="error-banner">{{ actionError }}</div>
 
-      <div class="stats-grid">
-        <article class="life-card">
-          <span class="stat-label">Current reel</span>
-          <strong>{{ statusLabel }}</strong>
-          <em>{{ currentReelId || 'Paste a reel URL below' }}</em>
-        </article>
-
-        <article>
-          <span class="stat-label">Saved status</span>
-          <strong>{{ savedLabel }}</strong>
-        </article>
-
-        <article>
-          <span class="stat-label">Step</span>
-          <strong>{{ status?.step || '-' }}/{{ status?.totalSteps || '-' }}</strong>
-        </article>
-
-        <article>
-          <span class="stat-label">Saved reels</span>
-          <strong>{{ savedReels.length }}</strong>
-        </article>
+      <div class="metric-grid">
+        <article><span class="stat-label">Saved</span><strong>{{ saved }}</strong></article>
+        <article><span class="stat-label">On your map</span><strong>{{ onMap }}</strong></article>
+        <article><span class="stat-label">Resolving</span><strong>{{ resolving }}</strong></article>
       </div>
 
-      <div class="location-card" :data-empty="notFood || !hasSelectedLocation">
-        <div v-if="notFood">
-          <p class="section-kicker">Not a food reel</p>
-          <h3>Skipped</h3>
-          <p class="muted">{{ rejectionReason }}</p>
-        </div>
-        <div v-else>
-          <p class="section-kicker">AI resolved location</p>
-          <h3>{{ selectedLocation.name || 'No exact location yet' }}</h3>
-          <p class="muted">
-            {{ selectedLocation.address || 'The worker will show the address here after AI extraction returns a specific place.' }}
-          </p>
-        </div>
-        <dl v-if="!notFood && hasSelectedLocation" class="location-grid">
-          <div>
-            <dt>Area</dt>
-            <dd>{{ selectedLocation.area || '-' }}</dd>
-          </div>
-          <div>
-            <dt>City</dt>
-            <dd>{{ selectedLocation.city || '-' }}</dd>
-          </div>
-          <div>
-            <dt>Coordinates</dt>
-            <dd>
-              <template v-if="selectedLocation.lat !== null && selectedLocation.lng !== null">
-                {{ selectedLocation.lat }}, {{ selectedLocation.lng }}
-              </template>
-              <template v-else>-</template>
-            </dd>
-          </div>
-          <div>
-            <dt>Confidence</dt>
-            <dd>{{ formatConfidence(selectedLocation.confidence) }}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>{{ selectedLocation.status || '-' }}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div v-if="commentAnalysis" class="location-card" data-empty="true">
-        <div>
-          <p class="section-kicker">Comment analysis</p>
-          <h3>{{ commentAnalysis.verdict || 'Audience reaction' }}</h3>
-          <p class="muted">
-            {{ commentAnalysis.analyzedCount }} comments ·
-            👍 {{ commentAnalysis.positiveCount }} ·
-            👎 {{ commentAnalysis.negativeCount }} ·
-            😐 {{ commentAnalysis.neutralCount }}
-            <template v-if="commentAnalysis.sponsoredSignal"> · ⚠ sponsored signal</template>
-          </p>
-          <dl class="location-grid">
-            <div>
-              <dt>Common praise</dt>
-              <dd>{{ commentAnalysis.commonPraise.length ? commentAnalysis.commonPraise.join(', ') : '-' }}</dd>
-            </div>
-            <div>
-              <dt>Common complaints</dt>
-              <dd>{{ commentAnalysis.commonComplaints.length ? commentAnalysis.commonComplaints.join(', ') : '-' }}</dd>
-            </div>
-            <div>
-              <dt>Sentiment</dt>
-              <dd>{{ formatSentiment(commentAnalysis.sentimentScore) }}</dd>
-            </div>
-            <div>
-              <dt>Authenticity</dt>
-              <dd>{{ commentAnalysis.authenticityNote || '-' }}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      <div class="log-cta">
-        <div>
-          <p class="section-kicker">Reel input</p>
-          <h3>Paste an Instagram reel link</h3>
-        </div>
-      </div>
-
-      <form class="form-grid" @submit.prevent="saveReel">
-        <label>
-          <span>Reel URL</span>
+      <form class="add-reel" @submit.prevent="add">
+        <p class="section-kicker">Add a spot</p>
+        <h3>Paste an Instagram food reel</h3>
+        <div class="add-reel-row">
           <input
             v-model="reelUrl"
             type="url"
             placeholder="https://www.instagram.com/reel/..."
             autocomplete="off"
           />
-        </label>
-
-        <button class="primary-button" type="submit" :disabled="loading || !reelUrl.trim()">
-          Save and process
-        </button>
+          <button class="primary-button" type="submit" :disabled="loading || !reelUrl.trim()">
+            {{ loading ? 'Saving…' : 'Save & resolve' }}
+          </button>
+        </div>
+        <p class="add-reel-hint muted">
+          We'll find the restaurant and drop it on your map automatically.
+        </p>
       </form>
-
-      <div class="log-cta">
-        <div>
-          <p class="section-kicker">Processing</p>
-          <h3>Status controls</h3>
-        </div>
-        <div class="modal-actions">
-          <button class="ghost-button compact-button" type="button" :disabled="!currentReelId" @click="fetchStatus">
-            Check status
-          </button>
-          <button class="ghost-button compact-button" type="button" :disabled="!currentReelId" @click="polling ? stopPolling() : startPolling()">
-            {{ polling ? 'Stop polling' : 'Start polling' }}
-          </button>
-          <button class="ghost-button compact-button" type="button" :disabled="!currentReelId" @click="fetchDetail">
-            Load detail
-          </button>
-        </div>
-      </div>
 
       <div class="history">
         <div class="history-head">
-          <h3>Saved reels</h3>
+          <h3>Saved spots</h3>
           <div class="filter-chips">
-            <button
-              class="chip"
-              type="button"
-              :data-active="!mineOnly"
-              @click="setMineOnly(false)"
-            >
+            <button class="chip" type="button" :data-active="!mineOnly" @click="setMineOnly(false)">
               Everyone
             </button>
-            <button
-              class="chip"
-              type="button"
-              :data-active="mineOnly"
-              @click="setMineOnly(true)"
-            >
+            <button class="chip" type="button" :data-active="mineOnly" @click="setMineOnly(true)">
               Saved by me
             </button>
-            <button class="ghost-button compact-button" type="button" @click="loadSavedReels">Reload</button>
           </div>
         </div>
 
         <TransitionGroup v-if="savedReels.length" name="list" tag="ul">
           <li v-for="item in savedReels" :key="item.reelId">
-            <button class="profile-link" type="button" @click="selectSaved(item)">
-              <strong>{{ item.reel.restaurant?.name || item.reel.shortcode }}</strong>
-              <span>{{ item.savedStatus }} / {{ item.reel.status }}</span>
-              <small v-if="item.reel.restaurant">
-                <template v-if="item.reel.restaurant.area">{{ item.reel.restaurant.area }} · </template>{{ item.reel.restaurant.city || item.reel.shortcode }}
-              </small>
-              <small v-else-if="item.reel.isFood === false">Not a food reel</small>
-              <small v-else-if="item.reel.status === 'complete'">Location needs review</small>
-            </button>
-            <b>{{ new Date(item.savedAt).toLocaleDateString() }}</b>
+            <a class="profile-link" :href="item.reel.url" target="_blank" rel="noopener">
+              <strong>{{ item.reel.restaurant?.name || 'Resolving…' }}</strong>
+              <small>{{ subtitle(item) }}</small>
+            </a>
+            <span class="reel-badge" :data-state="badge(item).state">{{ badge(item).label }}</span>
           </li>
         </TransitionGroup>
 
         <div v-else class="empty-state">
-          <strong>No saved reels yet</strong>
-          <span>Paste a reel URL above to create the first saved reel ref.</span>
+          <strong>No spots yet</strong>
+          <span>Paste a reel above, or share one to Theeta from Instagram.</span>
         </div>
       </div>
     </section>
   </div>
 </template>
+
+<style scoped>
+.add-reel {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--p-soft);
+}
+
+.add-reel h3 {
+  margin: 6px 0 14px;
+  font-size: 1.35rem;
+}
+
+.add-reel-row {
+  display: flex;
+  gap: 12px;
+}
+
+.add-reel-row input {
+  flex: 1;
+  background: #fff;
+}
+
+.add-reel-row .primary-button {
+  white-space: nowrap;
+}
+
+.add-reel-hint {
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+}
+
+.reel-badge {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.reel-badge[data-state='done'] {
+  background: #e4f6ea;
+  color: #1f7a45;
+}
+
+.reel-badge[data-state='pending'] {
+  background: #fdeae2;
+  color: #b4502f;
+}
+
+.reel-badge[data-state='review'] {
+  background: var(--p-soft);
+  color: var(--p);
+}
+
+.reel-badge[data-state='skip'] {
+  background: #eee;
+  color: #777;
+}
+
+@media (max-width: 640px) {
+  .add-reel-row {
+    flex-direction: column;
+  }
+
+  .add-reel-row .primary-button {
+    width: 100%;
+  }
+}
+</style>

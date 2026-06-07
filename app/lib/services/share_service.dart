@@ -5,11 +5,11 @@ import 'package:flutter/widgets.dart';
 
 import 'instagram_link.dart';
 
-/// Listens for content shared into the app (Instagram "Share to Theta")
+/// Listens for content shared into the app (Instagram "Share to Theeta")
 /// and emits parsed Instagram links.
 ///
 /// Native mobile share targets save into an inbox without opening the app.
-/// The inbox is consumed when Theta starts or resumes.
+/// The inbox is consumed when Theeta starts or resumes.
 class ShareService with WidgetsBindingObserver {
   static const _inbox = MethodChannel('com.example.app/share_inbox');
 

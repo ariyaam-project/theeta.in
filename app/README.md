@@ -2,6 +2,10 @@
 
 Flutter client for saving shared Instagram reels into the Theta API pipeline.
 
+## Download
+
+Prebuilt Android APKs live in [`releases/`](releases/README.md) — latest: [theeta-1.0.0.apk](releases/theeta-1.0.0.apk).
+
 ## Local Run
 
 Start the local services first:

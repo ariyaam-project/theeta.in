@@ -694,7 +694,7 @@ class _FoodListTabState extends State<FoodListTab> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Share an Instagram food reel to Theta, or add a link.',
+            'Share an Instagram food reel to Theeta, or add a link.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
           ),
