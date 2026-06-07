@@ -7,6 +7,7 @@ from pathlib import Path
 from .api_client import WorkerApiClient
 from .config import Settings
 from .downloader import download_audio
+from .comment_analyzer import CommentAnalyzer
 from .instagram_extractor import extract_evidence
 from .location_extractor import LocationExtractor
 from .models import ClaimedJob, PipelineResult
@@ -70,11 +71,43 @@ class Processor:
                 extraction.needs_transcription,
             )
 
+            # Relevance gate: a non-food reel ends here. Skipping the audio
+            # download + Whisper transcription is the main cost saver.
+            if not extraction.is_food_related:
+                logger.info(
+                    "processor.job.not_food job_id=%s reel_id=%s reason=%r",
+                    job.id,
+                    job.reelId,
+                    extraction.rejection_reason,
+                )
+                await self.api.complete(
+                    job.id,
+                    PipelineResult(evidence=evidence, extraction=extraction),
+                )
+                return
+
+            # Food reel: analyse the audience comments once (independent of the
+            # transcript path) and attach to whichever completion fires below.
+            comment_analysis = None
+            if evidence.comments:
+                analyzer = CommentAnalyzer(self.config)
+                comment_analysis = await _timed_thread(
+                    "comment_analysis", analyzer.analyze, evidence, job_id=job.id
+                )
+                logger.info(
+                    "processor.comments.done job_id=%s analyzed=%s pos=%s neg=%s sponsored=%s",
+                    job.id,
+                    comment_analysis.analyzed_count,
+                    comment_analysis.positive_count,
+                    comment_analysis.negative_count,
+                    comment_analysis.sponsored_signal,
+                )
+
             if _has_ai_location(extraction) and not extraction.needs_transcription:
                 logger.info("processor.job.complete_from_text job_id=%s reel_id=%s", job.id, job.reelId)
                 await self.api.complete(
                     job.id,
-                    PipelineResult(evidence=evidence, extraction=extraction),
+                    PipelineResult(evidence=evidence, extraction=extraction, comment_analysis=comment_analysis),
                 )
                 return
 
@@ -124,6 +157,7 @@ class Processor:
                         evidence=evidence,
                         extraction=extraction,
                         transcript=transcript,
+                        comment_analysis=comment_analysis,
                     ),
                 )
                 logger.info(

@@ -49,6 +49,8 @@ class EvidenceQuote(BaseModel):
 
 
 class LocationExtraction(BaseModel):
+    is_food_related: bool = True
+    rejection_reason: str | None = None
     restaurant_name: str | None = None
     branch_name: str | None = None
     area: str | None = None
@@ -65,7 +67,21 @@ class LocationExtraction(BaseModel):
     needs_transcription: bool
 
 
+class CommentAnalysis(BaseModel):
+    analyzed_count: int = 0
+    positive_count: int = 0
+    negative_count: int = 0
+    neutral_count: int = 0
+    sentiment_score: float = Field(default=0, ge=-1, le=1)
+    common_praise: list[str] = Field(default_factory=list)
+    common_complaints: list[str] = Field(default_factory=list)
+    sponsored_signal: bool = False
+    authenticity_note: str | None = None
+    verdict: str | None = None
+
+
 class PipelineResult(BaseModel):
     evidence: ReelEvidence
     extraction: LocationExtraction
     transcript: Transcript | None = None
+    comment_analysis: CommentAnalysis | None = None
