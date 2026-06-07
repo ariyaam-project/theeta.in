@@ -8,7 +8,9 @@ os.environ["POLL_ENABLED"] = "false"
 from app.config import Settings
 from app.models import (
     ClaimedJob,
+    CommentAnalysis,
     LocationExtraction,
+    ReelComment,
     ReelEvidence,
     Segment,
     Transcript,
@@ -97,6 +99,83 @@ class ProcessorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.transcript.text, transcript.text)
         self.assertEqual(result.extraction.suggested_address, "Cafe One, Kozhikode, Kerala")
         self.api.fail.assert_not_awaited()
+
+    @patch("app.processor.CommentAnalyzer")
+    @patch("app.processor.download_audio")
+    @patch("app.processor.LocationExtractor")
+    @patch("app.processor.extract_evidence")
+    async def test_non_food_reel_skips_audio_and_comments(
+        self, extract_evidence, location_extractor, download_audio, comment_analyzer
+    ):
+        extract_evidence.return_value = ReelEvidence(
+            caption="My morning gym routine",
+            comments=[ReelComment(text="great workout!")],
+        )
+        location_extractor.return_value.extract.return_value = LocationExtraction(
+            is_food_related=False,
+            rejection_reason="Fitness reel, not a food spot",
+            confidence=0.9,
+            needs_transcription=False,
+        )
+
+        await self.processor.process(self.job)
+
+        # The gate must stop before any expensive work.
+        download_audio.assert_not_called()
+        comment_analyzer.assert_not_called()
+        self.api.complete.assert_awaited_once()
+        result = self.api.complete.await_args.args[1]
+        self.assertFalse(result.extraction.is_food_related)
+        self.assertIsNone(result.comment_analysis)
+        self.api.fail.assert_not_awaited()
+
+    @patch("app.processor.CommentAnalyzer")
+    @patch("app.processor.download_audio")
+    @patch("app.processor.LocationExtractor")
+    @patch("app.processor.extract_evidence")
+    async def test_food_reel_with_comments_runs_comment_analysis(
+        self, extract_evidence, location_extractor, download_audio, comment_analyzer
+    ):
+        extract_evidence.return_value = ReelEvidence(
+            caption="Cafe One in Kozhikode",
+            comments=[ReelComment(text="best shawarma"), ReelComment(text="too pricey")],
+        )
+        location_extractor.return_value.extract.return_value = self.extraction
+        analysis = CommentAnalysis(
+            analyzed_count=2,
+            positive_count=1,
+            negative_count=1,
+            sentiment_score=0.1,
+            common_praise=["best shawarma"],
+            common_complaints=["too pricey"],
+            verdict="Mixed but mostly liked.",
+        )
+        comment_analyzer.return_value.analyze.return_value = analysis
+
+        await self.processor.process(self.job)
+
+        download_audio.assert_not_called()  # text location already resolved
+        comment_analyzer.return_value.analyze.assert_called_once()
+        result = self.api.complete.await_args.args[1]
+        self.assertEqual(result.comment_analysis.analyzed_count, 2)
+        self.assertEqual(result.comment_analysis.common_complaints, ["too pricey"])
+        self.api.fail.assert_not_awaited()
+
+    @patch("app.processor.CommentAnalyzer")
+    @patch("app.processor.download_audio")
+    @patch("app.processor.LocationExtractor")
+    @patch("app.processor.extract_evidence")
+    async def test_food_reel_without_comments_skips_comment_analysis(
+        self, extract_evidence, location_extractor, download_audio, comment_analyzer
+    ):
+        extract_evidence.return_value = self.evidence  # no comments
+        location_extractor.return_value.extract.return_value = self.extraction
+
+        await self.processor.process(self.job)
+
+        comment_analyzer.assert_not_called()
+        result = self.api.complete.await_args.args[1]
+        self.assertIsNone(result.comment_analysis)
 
     @patch("app.processor.extract_evidence", side_effect=RuntimeError("extract failed"))
     async def test_process_requeues_retryable_failure(self, _extract_evidence):

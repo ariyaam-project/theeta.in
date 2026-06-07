@@ -4,6 +4,10 @@ from .config import Settings
 from .models import LocationExtraction, ReelEvidence
 
 SYSTEM_PROMPT = """Extract restaurant and location clues from Instagram reel evidence.
+First decide if the reel is about food: a restaurant, cafe, street food, bakery, bar, dish, or eating-out experience.
+Set is_food_related=false for anything not about a food spot (travel vlogs, comedy, products, fitness, news, memes, etc.).
+When is_food_related=false, give a short rejection_reason and leave all location fields null/0.
+Only continue extracting location details when is_food_related=true.
 Return the most likely address, latitude, and longitude when the evidence is strong enough to identify one real place.
 Coordinates and address are AI-suggested, so only fill suggested_address/suggested_lat/suggested_lng when the place is specific, not just a city or vague area.
 If exact coordinates are uncertain, leave suggested_lat and suggested_lng null and explain confidence through suggested_location_confidence.
