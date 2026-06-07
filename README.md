@@ -1,98 +1,128 @@
 <div align="center">
+  <img src="web/public/images/logo.png" alt="Theeta" height="72" />
 
-# 🍜 Theeta
+# Theeta
 
 ### Turn food reels into real, mapped restaurants.
 
-Save the Instagram food reels you love — Theeta's AI resolves the **exact restaurant**
-and pins it on your personal map, ready when the craving hits.
-
-[theeta.in](https://theeta.in) · [Download the app](app/releases/README.md)
+[theeta.in](https://theeta.in) · [Download the Android app](app/releases/theeta-1.0.0.apk)
 
 </div>
 
 ---
 
-## The problem
+## Overview
 
-We all share food reels with friends. But when it's actually time to *go*:
+Theeta is a food‑discovery app for the way people actually find places to eat today — through
+Instagram reels. You save (or share) a food reel, and Theeta's AI watches it, figures out the
+**exact restaurant**, and drops it on your personal map and list. It ships as a **web app** and a
+**Flutter mobile app** on one shared backend.
 
-1. **You share it** — a friend drops a mouth-watering reel; you save it for "someday".
-2. **You can't find it** — someday comes, and you're digging through captions, comments
-   and DMs for a location that's barely there.
+## Problem Statement
+
+We all swap food reels with friends — but the moment you actually want to *go*:
+
+1. **You share it** — a friend drops a mouth‑watering reel; you save it for "someday".
+2. **You can't find it** — someday comes and you're digging through captions, comments and DMs for
+   a location that's barely there.
 3. **You can't trust it** — half the spots are paid promos or staged hype. Was the food even real?
 
-**Theeta solves step one first:** every reel you save is auto-resolved to the real
-restaurant and dropped on your map. Trust scoring for fake hype and paid promos is next.
+The reel was perfect; the plan falls apart.
 
-## How it works
+## Solution
 
-```mermaid
-flowchart LR
-    A[Share / paste<br/>Instagram reel] --> B[API Worker<br/>apis/]
-    B -->|store + trigger| C[AI pipeline<br/>worker/]
-    C -->|caption, comments,<br/>audio transcript| D[OpenAI<br/>structured output]
-    D -->|restaurant + lat/lng| B
-    B --> E[(D1 database)]
-    F[Web · app] -->|saved reels,<br/>map, analytics| B
-```
+Theeta kills the worst part first — the endless hunt. Save a reel and the pipeline automatically:
 
-1. A reel is shared from the **mobile app** or pasted on the **web** → `POST /api/reels`.
-2. The **API Worker** (`apis/`) stores it and triggers the **AI pipeline** (`worker/`).
-3. The pipeline pulls caption + comments with `yt-dlp`, asks **OpenAI** (structured output)
-   for the restaurant/location, and — only if text isn't enough — transcribes the audio
-   with `faster-whisper` and retries.
-4. The resolved restaurant (name, address, lat/lng, confidence) is written back and the
-   reel flips to **complete**.
-5. The user sees the spot on their **map**, **list**, and **analytics**.
+- pulls the caption + comments,
+- asks an LLM (structured output) for the restaurant and location,
+- transcribes the audio only when text isn't enough,
+- writes back the resolved restaurant with address, lat/lng and a confidence score.
 
-## Project structure
+The spot then lands on your **map**, **list**, and **analytics** — ready when the craving hits.
+Trust scoring for fake hype and paid promos is the next milestone.
 
-```
-theeta/
-├── apis/        API Worker — Hono on Cloudflare Workers + D1 (auth, reels,
-│                restaurants, saves, lists). The orchestrator.
-├── worker/      AI pipeline — FastAPI (Python). yt-dlp + OpenAI + faster-whisper
-│                resolve a reel to a real restaurant + location.
-├── web/         Web app — Nuxt 3 (Cloudflare). Marketing landing + dashboard,
-│                map, analytics, profile, email/password + Google auth.
-├── app/         Mobile app — Flutter (iOS + Android). Share-to-save, map,
-│                analytics, profile. Prebuilt APKs in app/releases/.
-├── docs/        API + deployment docs (api.md, docker.md).
-├── docker-compose.yml        Local orchestration of all services.
-└── run-ngrok.sh              Expose the local stack for device testing.
-```
+## Features
 
-## Tech stack
+- **Save by share or paste** — share an Instagram reel straight to Theeta, or paste a link.
+- **AI restaurant resolution** — caption + comments + audio transcript → exact restaurant + coordinates.
+- **Personal map** — every resolved spot pinned on an interactive map (Leaflet / OpenStreetMap).
+- **Analytics** — saved, resolved, processing, top cities, resolution confidence.
+- **Everyone vs. mine** — browse your own saves by default, or discover what everyone saved.
+- **Cross‑platform** — Nuxt web app + Flutter mobile app (iOS/Android) on one API.
+- **Auth** — email/password (PBKDF2) and Google OAuth, with shared sessions.
 
-| Layer | Tech |
-|-------|------|
-| API | Cloudflare Workers, [Hono](https://hono.dev), D1 (SQLite), R2 (media) |
-| AI pipeline | FastAPI, OpenAI (structured outputs), faster-whisper, yt-dlp |
-| Web | Nuxt 3, Vue 3, Leaflet (OpenStreetMap) |
-| Mobile | Flutter (Dart), flutter_map |
-| Auth | Email/password (PBKDF2) + Google OAuth → session tokens in D1 |
+## Tech Stack
 
-## Getting started
+- **Frontend:** Nuxt 3 / Vue 3 (web), Flutter / Dart (mobile), Leaflet + OpenStreetMap, flutter_map
+- **Backend:** Hono on Cloudflare Workers (API + auth/orchestration); FastAPI (Python) AI pipeline
+- **Database:** Cloudflare D1 (SQLite) + R2 (media storage)
+- **APIs:** OpenAI (structured outputs), faster‑whisper (audio transcription), yt‑dlp (reel extraction), Google OAuth, Google Places/Maps
+- **Hosting:** Cloudflare Workers (API + web), containerized FastAPI worker
 
-Spin up the whole stack locally with Docker:
+## Codex / OpenAI Usage
+
+OpenAI is both **inside the product** and **part of how we built it**.
+
+**In the product (core feature):**
+- **Structured Outputs** turn a reel's caption + comments (and, when needed, the audio transcript)
+  into a typed restaurant/location object — name, branch, area, city, suggested address, lat/lng and
+  a confidence score — so resolution is deterministic and parseable (`worker/`).
+- **faster‑whisper** transcribes reel audio only when text evidence isn't confident enough, then the
+  model re‑runs on the richer evidence.
+
+**During the build:**
+- **Ideation & architecture** — shaping the reel → AI → restaurant pipeline and the Workers + D1 + FastAPI split.
+- **Code generation** — scaffolding API routes, the Flutter UI, and the Nuxt landing/app pages.
+- **Debugging** — iOS signing / Google Sign‑In config, Cloudflare/Nuxt build issues, SQL query fixes.
+- **Documentation** — this README, per‑service docs, and release notes.
+
+## Demo
+
+> 📹 Demo / pitch video: _add link here_
+
+## Screenshots
+
+| Landing | App preview                               |
+|---------|-------------------------------------------|
+| Web     | ![screenshot.png](images/screenshot.png)  |
+| APP     | ![screenshot.png](images/screenshot2.png) |
+
+
+
+> Add more screenshots (map, dashboard, analytics) here.
+
+## How to Run Locally
 
 ```bash
-cp .env.example .env   # fill in OPENAI / GOOGLE / service tokens
+git clone https://github.com/ariyaam-project/theeta.in.git
+cd theeta.in
+```
+
+**Everything at once (Docker):**
+
+```bash
+cp .env.example .env   # add OPENAI / GOOGLE / service tokens
 docker compose up
 ```
 
-Or run a single component — see each folder's README:
+**Or run a single component:**
 
-- **API:** [`apis/README.md`](apis/README.md) — `npm run dev` (Wrangler) + D1 migrations
-- **AI pipeline:** [`worker/README.md`](worker/README.md) — FastAPI service
-- **Web:** `cd web && npm run dev` → http://localhost:3000
-- **Mobile:** [`app/README.md`](app/README.md) — `flutter run` with `--dart-define=THETA_API_BASE=...`
+```bash
+# Web app  → http://localhost:3000
+cd web && npm install && npm run dev
 
-## Downloads
+# API (Cloudflare Worker + D1)
+cd apis && npm install && npm run dev        # see apis/README.md
 
-Prebuilt Android APK: [app/releases/theeta-1.0.0.apk](app/releases/theeta-1.0.0.apk)
-(see [release notes](app/releases/README.md)).
+# AI pipeline (FastAPI)
+cd worker && pip install -r requirements.txt # see worker/README.md
+
+# Mobile app
+cd app && flutter run --dart-define=THETA_API_BASE=https://auth.theeta.in
+```
+
+See [`apis/README.md`](apis/README.md), [`worker/README.md`](worker/README.md) and
+[`app/README.md`](app/README.md) for per‑service setup.
 
 ## License
 
