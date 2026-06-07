@@ -64,6 +64,8 @@ export async function ensureSchema(db: D1Database) {
       status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending','downloading','transcribing','detecting',
                           'resolving','analyzing_comments','summarizing','complete','failed')),
+      is_food INTEGER NOT NULL DEFAULT 1,
+      rejection_reason TEXT,
       error TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -187,6 +189,23 @@ export async function ensureSchema(db: D1Database) {
       is_sponsored_flag INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
+    )`),
+    // Reel-level aggregate of the audience comments (PRD Step 5).
+    db.prepare(`CREATE TABLE IF NOT EXISTS reel_comment_analysis (
+      id TEXT PRIMARY KEY,
+      reel_id TEXT NOT NULL UNIQUE,
+      analyzed_count INTEGER NOT NULL DEFAULT 0,
+      positive_count INTEGER NOT NULL DEFAULT 0,
+      negative_count INTEGER NOT NULL DEFAULT 0,
+      neutral_count INTEGER NOT NULL DEFAULT 0,
+      sentiment_score REAL,
+      common_praise TEXT,
+      common_complaints TEXT,
+      sponsored_signal INTEGER NOT NULL DEFAULT 0,
+      authenticity_note TEXT,
+      verdict TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (reel_id) REFERENCES reels(id) ON DELETE CASCADE
     )`),
 
     // --- Trust + summary ---

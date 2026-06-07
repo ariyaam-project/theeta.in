@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Brutalist offset card: a dark backing block with the content panel nudged
-/// up-left so a hard shadow shows through. Used across every screen.
+/// Soft rounded surface card with a subtle drop shadow. Used across every
+/// screen. (Was a brutalist offset card; now matches the periwinkle web theme.)
 class ShadowCard extends StatelessWidget {
   final Widget child;
   final Color color;
@@ -19,18 +19,21 @@ class ShadowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: ink),
-      child: Transform.translate(
-        offset: const Offset(-4, -4),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: color,
-            border: Border.all(color: ink, width: 2),
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ink.withValues(alpha: 0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: ink.withValues(alpha: 0.10),
+            blurRadius: 30,
+            spreadRadius: -12,
+            offset: const Offset(0, 18),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 }
@@ -96,13 +99,18 @@ class ErrorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: ShadowCard(
-        color: accent,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDEAE2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: peach.withValues(alpha: 0.5)),
+        ),
         child: Text(
           message,
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
+            color: Color(0xFF9A3B22),
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

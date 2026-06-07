@@ -14,6 +14,7 @@ class Reel {
   final String status;
   final String? savedStatus;
   final String? caption;
+  final String? thumbnailUrl;
   final RestaurantLocation? restaurant;
   final LocationExtraction? locationExtraction;
 
@@ -31,20 +32,24 @@ class Reel {
     required this.addedAt,
     this.savedStatus,
     this.caption,
+    this.thumbnailUrl,
     this.restaurant,
     this.locationExtraction,
     this.note,
   });
 
-  bool get isProcessing =>
-      status == 'pending' ||
-      status == 'downloading' ||
-      status == 'transcribing' ||
-      status == 'detecting' ||
-      status == 'resolving' ||
-      status == 'analyzing_comments' ||
-      status == 'summarizing' ||
-      savedStatus == 'processing';
+  bool get isProcessing {
+    // Terminal states win — saved_reels.status can lag behind reels.status.
+    if (status == 'complete' || status == 'failed') return false;
+    return status == 'pending' ||
+        status == 'downloading' ||
+        status == 'transcribing' ||
+        status == 'detecting' ||
+        status == 'resolving' ||
+        status == 'analyzing_comments' ||
+        status == 'summarizing' ||
+        savedStatus == 'processing';
+  }
 
   String get timeAgo {
     final d = DateTime.now().difference(addedAt);
@@ -68,6 +73,7 @@ class Reel {
     'status': status,
     'savedStatus': savedStatus,
     'caption': caption,
+    'thumbnailUrl': thumbnailUrl,
     'restaurant': restaurant?.toJson(),
     'locationExtraction': locationExtraction?.toJson(),
     'addedAt': addedAt.toIso8601String(),
@@ -81,6 +87,7 @@ class Reel {
     status: (j['status'] ?? 'saved') as String,
     savedStatus: j['savedStatus'] as String?,
     caption: j['caption'] as String?,
+    thumbnailUrl: j['thumbnailUrl'] as String?,
     restaurant: j['restaurant'] == null
         ? null
         : RestaurantLocation.fromJson(j['restaurant'] as Map<String, dynamic>),

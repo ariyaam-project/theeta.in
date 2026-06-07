@@ -129,13 +129,48 @@ internalRoutes.post('/jobs/:id/result', async (c) => {
   if (job.status === 'succeeded') return c.json({ ok: true, reelId: job.reel_id })
   if (job.status !== 'running') apiError(409, 'Job is not running')
 
-  const hasAiLocation =
-    extraction.restaurant_name &&
-    extraction.suggested_address &&
-    typeof extraction.suggested_lat === 'number' &&
-    typeof extraction.suggested_lng === 'number'
+  // Relevance gate: a non-food reel terminates here. Mark it complete but
+  // is_food=0 so the UI/queries skip it; no restaurant is created.
+  if (extraction.is_food_related === false) {
+    const reason = typeof extraction.rejection_reason === 'string'
+      ? extraction.rejection_reason.slice(0, 500)
+      : 'Not a food reel'
+    await db.batch([
+      db.prepare(
+        `UPDATE reels SET caption = ?, status = 'complete', is_food = 0, rejection_reason = ?,
+           error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+      ).bind(evidence.caption || null, reason, job.reel_id),
+      db.prepare(`UPDATE saved_reels SET status = 'processed', updated_at = CURRENT_TIMESTAMP WHERE reel_id = ?`)
+        .bind(job.reel_id),
+      db.prepare(`DELETE FROM reel_entities WHERE reel_id = ?`).bind(job.reel_id),
+      db.prepare(
+        `INSERT INTO reel_entities (id, reel_id, confidence, resolution_status)
+         VALUES (?, ?, ?, 'not_food')`
+      ).bind(newId(), job.reel_id, extraction.confidence || 0),
+      db.prepare(`UPDATE processing_jobs SET status = 'succeeded', finished_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(id)
+    ])
+    return c.json({ ok: true, reelId: job.reel_id, rejected: true })
+  }
+
+  // Resolution is best-effort: the AI often returns a name without coordinates,
+  // or coordinates without a clean name. Build a spot from whatever we got.
+  const aiName =
+    (typeof extraction.restaurant_name === 'string' && extraction.restaurant_name.trim()) || null
+  const aiLat = typeof extraction.suggested_lat === 'number' ? extraction.suggested_lat : null
+  const aiLng = typeof extraction.suggested_lng === 'number' ? extraction.suggested_lng : null
+  const aiAddress =
+    (typeof extraction.suggested_address === 'string' && extraction.suggested_address.trim()) || null
+  const displayName =
+    aiName ||
+    extraction.area ||
+    extraction.city ||
+    (aiAddress ? aiAddress.split(',')[0].trim() : null)
+  // A spot worth saving needs at least a name/area or a real address/coords.
+  const hasLocation = Boolean(displayName || aiAddress || (aiLat !== null && aiLng !== null))
+  // "ai_suggested" only when we have a name + pinpoint coords; else needs review.
+  const resolutionStatus = aiName && aiLat !== null && aiLng !== null ? 'ai_suggested' : 'needs_review'
   const queries = [
-    db.prepare(`UPDATE reels SET caption = ?, status = 'complete', error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+    db.prepare(`UPDATE reels SET caption = ?, status = 'complete', is_food = 1, rejection_reason = NULL, error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
       .bind(evidence.caption || null, job.reel_id),
     db.prepare(`UPDATE saved_reels SET status = 'processed', updated_at = CURRENT_TIMESTAMP WHERE reel_id = ?`)
       .bind(job.reel_id),
@@ -157,7 +192,7 @@ internalRoutes.post('/jobs/:id/result', async (c) => {
       JSON.stringify((extraction.evidence || []).map((item: any) => item.source)),
       JSON.stringify(extraction.landmarks || []), JSON.stringify(extraction.evidence || []),
       extraction.confidence || 0,
-      hasAiLocation ? 'ai_suggested' : 'needs_review'
+      resolutionStatus
     )
   ]
 
@@ -183,10 +218,11 @@ internalRoutes.post('/jobs/:id/result', async (c) => {
   }
 
   let restaurantId: string | null = null
-  if (hasAiLocation) {
+  if (hasLocation) {
+    const name = displayName || 'Unnamed spot'
     const existing = await db
-      .prepare(`SELECT id FROM restaurants WHERE name = ? AND address = ? LIMIT 1`)
-      .bind(extraction.restaurant_name, extraction.suggested_address)
+      .prepare(`SELECT id FROM restaurants WHERE name = ? AND ifnull(address, '') = ifnull(?, '') LIMIT 1`)
+      .bind(name, aiAddress)
       .first<{ id: string }>()
     restaurantId = existing?.id || newId()
     if (!existing) {
@@ -196,14 +232,14 @@ internalRoutes.post('/jobs/:id/result', async (c) => {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`
         ).bind(
           restaurantId,
-          extraction.restaurant_name,
-          slugify(extraction.restaurant_name, job.reel_id),
+          name,
+          slugify(name, job.reel_id),
           null,
-          extraction.suggested_address,
+          aiAddress,
           extraction.area || null,
           extraction.city || null,
-          extraction.suggested_lat,
-          extraction.suggested_lng
+          aiLat,
+          aiLng
         )
       )
     }
@@ -212,10 +248,33 @@ internalRoutes.post('/jobs/:id/result', async (c) => {
         .bind(newId(), restaurantId, job.reel_id, extraction.suggested_location_confidence || extraction.confidence || 0)
     )
   }
+  const ca = body.comment_analysis
+  if (ca && typeof ca === 'object') {
+    queries.push(
+      db.prepare(
+        `INSERT INTO reel_comment_analysis (
+          id, reel_id, analyzed_count, positive_count, negative_count, neutral_count,
+          sentiment_score, common_praise, common_complaints, sponsored_signal, authenticity_note, verdict
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(reel_id) DO UPDATE SET
+           analyzed_count = excluded.analyzed_count, positive_count = excluded.positive_count,
+           negative_count = excluded.negative_count, neutral_count = excluded.neutral_count,
+           sentiment_score = excluded.sentiment_score, common_praise = excluded.common_praise,
+           common_complaints = excluded.common_complaints, sponsored_signal = excluded.sponsored_signal,
+           authenticity_note = excluded.authenticity_note, verdict = excluded.verdict`
+      ).bind(
+        newId(), job.reel_id,
+        ca.analyzed_count || 0, ca.positive_count || 0, ca.negative_count || 0, ca.neutral_count || 0,
+        typeof ca.sentiment_score === 'number' ? ca.sentiment_score : null,
+        JSON.stringify(ca.common_praise || []), JSON.stringify(ca.common_complaints || []),
+        ca.sponsored_signal ? 1 : 0, ca.authenticity_note || null, ca.verdict || null
+      )
+    )
+  }
   queries.push(db.prepare(`UPDATE processing_jobs SET status = 'succeeded', finished_at = CURRENT_TIMESTAMP WHERE id = ?`).bind(id))
   await db.batch(queries)
 
-  return c.json({ ok: true, reelId: job.reel_id, restaurantId, resolved: Boolean(hasAiLocation) })
+  return c.json({ ok: true, reelId: job.reel_id, restaurantId, resolved: Boolean(hasLocation) })
 })
 
 internalRoutes.post('/jobs/:id/transcript', async (c) => {

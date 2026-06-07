@@ -89,44 +89,7 @@ const features = [
       <div class="edu-hero-art">
         <span class="edu-spark edu-spark-1" aria-hidden="true">✦</span>
         <span class="edu-spark edu-spark-2" aria-hidden="true">✦</span>
-        <div class="edu-phone">
-          <div class="edu-phone-status">
-            <span>9:41</span>
-            <span>●●● 📶 🔋</span>
-          </div>
-          <p class="edu-greet">Good evening,</p>
-          <h3 class="edu-greet-name">Hungry foodie</h3>
-
-          <div class="edu-highlight">
-            <div>
-              <strong>New spot resolved</strong>
-              <p>Bait Al Mandi · Kochi</p>
-              <button type="button">View on map</button>
-            </div>
-            <span class="edu-highlight-emoji" aria-hidden="true">🍛</span>
-          </div>
-
-          <div class="edu-chips">
-            <span class="edu-chip is-on">All</span>
-            <span class="edu-chip">Biryani</span>
-            <span class="edu-chip">Cafe</span>
-          </div>
-
-          <div class="edu-saved-head">
-            <strong>Saved spots</strong>
-            <span>See all</span>
-          </div>
-          <div class="edu-mini-grid">
-            <div class="edu-mini edu-mini-a">
-              <span aria-hidden="true">🍜</span>
-              <b>Ramen lane</b>
-            </div>
-            <div class="edu-mini edu-mini-b">
-              <span aria-hidden="true">🧁</span>
-              <b>Dessert bar</b>
-            </div>
-          </div>
-        </div>
+        <img class="edu-hero-img" src="/images/hero.png" alt="Theeta app preview" />
       </div>
     </section>
 
@@ -471,6 +434,14 @@ const features = [
   right: 16%;
 }
 
+.edu-hero-img {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 50px 90px rgba(44, 43, 58, 0.35));
+}
+
 .edu-phone {
   width: 320px;
   max-width: 100%;
@@ -628,7 +599,7 @@ const features = [
   padding: 30px 26px;
   border-radius: 26px;
   text-align: left;
-  box-shadow: 0 26px 46px -30px rgba(44, 43, 58, 0.45);
+  box-shadow: 0 14px 30px -24px rgba(44, 43, 58, 0.3);
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
@@ -649,7 +620,7 @@ const features = [
 
 .edu-story-card:hover {
   transform: rotate(0deg) translateY(-5px);
-  box-shadow: 0 34px 56px -28px rgba(44, 43, 58, 0.5);
+  box-shadow: 0 20px 38px -26px rgba(44, 43, 58, 0.35);
 }
 
 .edu-story-emoji {
@@ -926,15 +897,36 @@ const features = [
 
 @media (max-width: 720px) {
   .edu-nav {
-    flex-wrap: wrap;
-    padding: 18px 22px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
   }
 
+  /* Keep the header on one line — drop the in-page anchors on small screens. */
   .edu-links {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin: 6px 0 0;
+    display: none;
+  }
+
+  .edu-brand img {
+    height: 30px;
+  }
+
+  .edu-brand span {
+    font-size: 1.2rem;
+  }
+
+  .edu-actions {
+    gap: 10px;
+  }
+
+  .edu-login {
+    font-size: 0.95rem;
+  }
+
+  .edu-pill-outline {
+    padding: 10px 16px;
+    font-size: 0.95rem;
   }
 
   .edu-hero,

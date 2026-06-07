@@ -1,7 +1,11 @@
+import logging
+
 from openai import OpenAI
 
 from .config import Settings
 from .models import LocationExtraction, ReelEvidence
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """Extract restaurant and location clues from Instagram reel evidence.
 First decide if the reel is about food: a restaurant, cafe, street food, bakery, bar, dish, or eating-out experience.
@@ -32,6 +36,13 @@ class LocationExtractor:
             f"Comments:\n{comments or '(none)'}\n\n"
             f"Transcript:\n{transcript or '(not available)'}"
         )
+        logger.info(
+            "location_extractor.input model=%s has_transcript=%s comments=%s",
+            self.model,
+            transcript is not None,
+            len(evidence.comments),
+        )
+        logger.info("location_extractor.input.payload:\n%s", input_text)
         response = self.client.responses.parse(
             model=self.model,
             input=[

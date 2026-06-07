@@ -90,7 +90,7 @@ reelRoutes.get('/saved/list', async (c) => {
 
   const statement = db.prepare(
     `SELECT sub.saved_status, sub.saved_at,
-            r.id, r.ig_shortcode, r.url, r.status, r.caption, r.thumbnail_url, r.created_at,
+            r.id, r.ig_shortcode, r.url, r.status, r.is_food, r.rejection_reason, r.caption, r.thumbnail_url, r.created_at,
             rest.id AS restaurant_id, rest.slug AS restaurant_slug, rest.name AS restaurant_name,
             rest.address AS restaurant_address, rest.area AS restaurant_area, rest.city AS restaurant_city,
             rest.lat AS restaurant_lat, rest.lng AS restaurant_lng, rr.confidence AS restaurant_confidence
@@ -101,7 +101,13 @@ reelRoutes.get('/saved/list', async (c) => {
        ${mine ? 'WHERE user_id = ?' : ''}
      ) sub
      JOIN reels r ON r.id = sub.reel_id
-     LEFT JOIN restaurant_reels rr ON rr.reel_id = r.id
+     LEFT JOIN (
+       SELECT reel_id, restaurant_id, confidence,
+              ROW_NUMBER() OVER (
+                PARTITION BY reel_id ORDER BY confidence DESC, created_at DESC
+              ) AS rrn
+       FROM restaurant_reels
+     ) rr ON rr.reel_id = r.id AND rr.rrn = 1
      LEFT JOIN restaurants rest ON rest.id = rr.restaurant_id
      WHERE sub.rn = 1
      ORDER BY sub.saved_at DESC`
@@ -118,6 +124,8 @@ reelRoutes.get('/saved/list', async (c) => {
         shortcode: row.ig_shortcode,
         url: row.url,
         status: row.status,
+        isFood: row.is_food !== 0,
+        rejectionReason: row.rejection_reason,
         caption: row.caption,
         thumbnailUrl: row.thumbnail_url,
         createdAt: row.created_at,
@@ -148,9 +156,9 @@ reelRoutes.get('/:id/status', async (c) => {
   await ensureSchema(db)
 
   const row = await db
-    .prepare(`SELECT id, status, error FROM reels WHERE id = ? LIMIT 1`)
+    .prepare(`SELECT id, status, is_food, rejection_reason, error FROM reels WHERE id = ? LIMIT 1`)
     .bind(id)
-    .first<{ id: string; status: ReelStatus; error: string | null }>()
+    .first<{ id: string; status: ReelStatus; is_food: number; rejection_reason: string | null; error: string | null }>()
   if (!row) apiError(404, 'Reel not found')
 
   const restaurant = await db
@@ -171,6 +179,8 @@ reelRoutes.get('/:id/status', async (c) => {
   return c.json({
     id: row.id,
     status: row.status,
+    isFood: row.is_food !== 0,
+    rejectionReason: row.rejection_reason,
     savedStatus: savedReel?.status || null,
     savedAt: savedReel?.created_at || null,
     step,
@@ -229,7 +239,7 @@ reelRoutes.get('/:id', async (c) => {
   const row = await db
     .prepare(
       `SELECT
-         re.id, re.ig_shortcode, re.url, re.status, re.caption, re.thumbnail_url,
+         re.id, re.ig_shortcode, re.url, re.status, re.is_food, re.rejection_reason, re.caption, re.thumbnail_url,
          re.posted_at, re.like_count, re.comment_count, re.creator_id,
          c.username AS creator_username, c.full_name AS creator_full_name,
          c.profile_pic_url AS creator_pic, c.is_verified AS creator_verified,
@@ -259,12 +269,23 @@ reelRoutes.get('/:id', async (c) => {
     .bind(id)
     .first<any>()
 
+  const comments = await db
+    .prepare(
+      `SELECT analyzed_count, positive_count, negative_count, neutral_count, sentiment_score,
+              common_praise, common_complaints, sponsored_signal, authenticity_note, verdict
+       FROM reel_comment_analysis WHERE reel_id = ? LIMIT 1`
+    )
+    .bind(id)
+    .first<any>()
+
   return c.json({
     reel: {
       id: row.id,
       shortcode: row.ig_shortcode,
       url: row.url,
       status: row.status,
+      isFood: row.is_food !== 0,
+      rejectionReason: row.rejection_reason,
       caption: row.caption,
       thumbnailUrl: row.thumbnail_url,
       postedAt: row.posted_at,
@@ -297,6 +318,20 @@ reelRoutes.get('/:id', async (c) => {
             evidence: safeJson(entity.evidence, []),
             confidence: entity.confidence,
             resolutionStatus: entity.resolution_status
+          }
+        : null,
+      commentAnalysis: comments
+        ? {
+            analyzedCount: comments.analyzed_count,
+            positiveCount: comments.positive_count,
+            negativeCount: comments.negative_count,
+            neutralCount: comments.neutral_count,
+            sentimentScore: comments.sentiment_score,
+            commonPraise: safeJson(comments.common_praise, []),
+            commonComplaints: safeJson(comments.common_complaints, []),
+            sponsoredSignal: comments.sponsored_signal === 1,
+            authenticityNote: comments.authenticity_note,
+            verdict: comments.verdict
           }
         : null
     }
