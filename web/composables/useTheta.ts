@@ -95,7 +95,8 @@ export async function useTheta() {
   const config = useRuntimeConfig()
   const reelUrl = ref('')
   const devEmail = ref('dev@theta.local')
-  const mineOnly = ref(false)
+  // Default to the signed-in user's own saves; "Everyone" is an explicit opt-in.
+  const mineOnly = ref(true)
   const currentReelId = ref('')
   const status = ref<ReelStatus | null>(null)
   const detail = ref<ReelDetail | null>(null)

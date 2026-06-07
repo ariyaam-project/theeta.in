@@ -20,7 +20,8 @@ class AppState extends ChangeNotifier {
   String? error;
 
   /// false = show reels saved by anyone; true = only the current user's saves.
-  bool mineOnly = false;
+  /// Default to the user's own saves; "Everyone" is an explicit opt-in.
+  bool mineOnly = true;
 
   // Auto-poll while any reel is still processing (the API resolves async).
   Timer? _poll;

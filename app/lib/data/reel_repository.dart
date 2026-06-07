@@ -80,7 +80,7 @@ class ReelRepository {
     final response = await _request(
       'POST',
       '/api/dev/login',
-      body: {'email': _devEmail, 'name': 'Theta Mobile Dev'},
+      body: {'email': _devEmail, 'name': 'Theeta Mobile Dev'},
     );
     _ensureOk(response, 'dev login');
     await _storeSession(jsonDecode(response.body) as Map<String, dynamic>);
