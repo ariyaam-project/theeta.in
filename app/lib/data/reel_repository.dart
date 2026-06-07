@@ -226,6 +226,7 @@ Reel _savedItemToReel(Map<String, dynamic> item) {
     status: reel['status'] as String,
     savedStatus: item['savedStatus'] as String?,
     caption: reel['caption'] as String?,
+    thumbnailUrl: reel['thumbnailUrl'] as String?,
     restaurant: reel['restaurant'] == null
         ? null
         : RestaurantLocation.fromJson(
@@ -244,6 +245,7 @@ Reel _detailToReel(Map<String, dynamic> detail, Reel previous) {
     status: reel['status'] as String,
     savedStatus: previous.savedStatus,
     caption: reel['caption'] as String?,
+    thumbnailUrl: reel['thumbnailUrl'] as String? ?? previous.thumbnailUrl,
     restaurant: reel['restaurant'] == null
         ? null
         : RestaurantLocation.fromJson(

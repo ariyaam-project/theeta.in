@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/reel_repository.dart';
@@ -20,6 +22,53 @@ class AppState extends ChangeNotifier {
   /// false = show reels saved by anyone; true = only the current user's saves.
   bool mineOnly = false;
 
+  // Auto-poll while any reel is still processing (the API resolves async).
+  Timer? _poll;
+  int _pollTicks = 0;
+  static const _maxPollTicks = 45; // ~3 min at 4s
+
+  void _ensurePolling() {
+    if (reels.any((r) => r.isProcessing) && _pollTicks < _maxPollTicks) {
+      _poll ??= Timer.periodic(const Duration(seconds: 4), (_) => _pollTick());
+    } else {
+      _stopPolling();
+    }
+  }
+
+  void _stopPolling() {
+    _poll?.cancel();
+    _poll = null;
+  }
+
+  Future<void> _pollTick() async {
+    _pollTicks++;
+    final processing = reels.where((r) => r.isProcessing).toList();
+    if (processing.isEmpty) {
+      _stopPolling();
+      return;
+    }
+    var changed = false;
+    for (final r in processing) {
+      final fresh = await repo.refresh(r);
+      if (fresh == null) continue;
+      final i = reels.indexWhere((x) => x.id == fresh.id);
+      if (i >= 0) {
+        reels[i] = fresh;
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+    if (_pollTicks >= _maxPollTicks || !reels.any((r) => r.isProcessing)) {
+      _stopPolling();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
+  }
+
   String get displayName => (user?['displayName'] as String?) ?? 'You';
   String get email => (user?['email'] as String?) ?? '';
 
@@ -36,6 +85,8 @@ class AppState extends ChangeNotifier {
     }
     bootstrapped = true;
     notifyListeners();
+    _pollTicks = 0;
+    _ensurePolling();
   }
 
   Future<List<Reel>> _safeLoad() async {
@@ -55,6 +106,7 @@ class AppState extends ChangeNotifier {
     reels = await _safeLoad();
     busy = false;
     notifyListeners();
+    _ensurePolling();
   }
 
   Future<bool> _auth(Future<void> Function() action, String label) async {
@@ -66,6 +118,8 @@ class AppState extends ChangeNotifier {
       user = await repo.currentUser();
       reels = await _safeLoad();
       loggedIn = true;
+      _pollTicks = 0;
+      _ensurePolling();
       return true;
     } catch (e) {
       error = '$label: $e';
@@ -106,6 +160,8 @@ class AppState extends ChangeNotifier {
     try {
       reels = await repo.addLink(url);
       error = null;
+      _pollTicks = 0;
+      _ensurePolling();
       return null;
     } catch (e) {
       return e.toString();
@@ -117,20 +173,25 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshAll() async {
     try {
-      var list = await repo.load(mineOnly: mineOnly);
-      for (final reel in list.where((r) => r.isProcessing).toList()) {
-        final fresh = await repo.refresh(reel);
-        if (fresh != null) {
-          final i = list.indexWhere((r) => r.id == fresh.id);
-          if (i >= 0) list[i] = fresh;
-        }
-      }
+      final list = await repo.load(mineOnly: mineOnly);
       reels = list;
+      notifyListeners(); // show the fresh saved list right away
+      // Force-pull detail for anything still processing OR not yet resolved,
+      // so names/locations that landed after completion show up.
+      for (final reel
+          in list.where((r) => r.isProcessing || r.restaurant == null).toList()) {
+        final fresh = await repo.refresh(reel);
+        if (fresh == null) continue;
+        final i = reels.indexWhere((r) => r.id == fresh.id);
+        if (i >= 0) reels[i] = fresh;
+      }
       error = null;
     } catch (e) {
       error = e.toString();
     }
     notifyListeners();
+    _pollTicks = 0;
+    _ensurePolling();
   }
 
   Future<void> refreshOne(Reel reel) async {

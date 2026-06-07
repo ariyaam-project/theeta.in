@@ -25,11 +25,11 @@ class _MainShellState extends State<MainShell> {
   final _share = ShareService();
   StreamSubscription<InstagramLink>? _sub;
   Future<void> _queue = Future.value();
-  int _index = 0;
+  static const _homeTab = 0;
+  static const _mapTab = 1;
+  int _index = _homeTab;
 
   AppState get _state => widget.state;
-
-  static const _foodTab = 2;
 
   @override
   void initState() {
@@ -53,7 +53,7 @@ class _MainShellState extends State<MainShell> {
     final err = await _state.addLink(link.url);
     if (!mounted) return;
     _snack(err == null ? 'Reel saved for processing' : 'Could not save reel: $err');
-    if (err == null) setState(() => _index = _foodTab);
+    if (err == null) setState(() => _index = _homeTab);
   }
 
   void _snack(String message) {
@@ -65,31 +65,44 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      AnalyticsTab(state: _state),
+      FoodListTab(
+        state: _state,
+        onOpenMap: () => setState(() => _index = _mapTab),
+      ),
       MapTab(state: _state),
-      FoodListTab(state: _state),
+      AnalyticsTab(state: _state),
       ProfileTab(state: _state),
     ];
 
     return Scaffold(
+      backgroundColor: bg,
       body: SafeArea(child: IndexedStack(index: _index, children: tabs)),
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: ink, width: 2)),
+        decoration: BoxDecoration(
+          color: paper,
+          border: Border(top: BorderSide(color: ink.withValues(alpha: 0.06))),
+          boxShadow: [
+            BoxShadow(
+              color: ink.withValues(alpha: 0.06),
+              blurRadius: 24,
+              offset: const Offset(0, -8),
+            ),
+          ],
         ),
         child: BottomNavigationBar(
           currentIndex: _index,
           onTap: (i) => setState(() => _index = i),
           type: BottomNavigationBarType.fixed,
           backgroundColor: paper,
+          elevation: 0,
           selectedItemColor: accent,
-          unselectedItemColor: Colors.black45,
+          unselectedItemColor: muted,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800),
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.insights_outlined),
-              activeIcon: Icon(Icons.insights),
-              label: 'Analytics',
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.map_outlined),
@@ -97,9 +110,9 @@ class _MainShellState extends State<MainShell> {
               label: 'Map',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.restaurant_menu_outlined),
-              activeIcon: Icon(Icons.restaurant_menu),
-              label: 'Food',
+              icon: Icon(Icons.insights_outlined),
+              activeIcon: Icon(Icons.insights),
+              label: 'Analytics',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

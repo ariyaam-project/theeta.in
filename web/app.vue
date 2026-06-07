@@ -868,7 +868,7 @@ li b {
   display: grid;
   place-items: center;
   align-content: center;
-  min-height: 320px;
+  min-height: 360px;
   overflow: hidden;
   background: linear-gradient(180deg, #ffffff 0%, #f6f5fb 45%, #ece9fb 100%);
 }
@@ -877,7 +877,7 @@ li b {
   position: absolute;
   left: 0;
   right: 0;
-  top: 64px;
+  top: 48px;
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
@@ -909,9 +909,9 @@ li b {
   -webkit-background-clip: text;
   background-clip: text;
   font-family: "Bungee Shade", Inter, ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(8rem, 27vw, 26rem);
+  font-size: clamp(5.5rem, 19vw, 17rem);
   font-weight: 400;
-  line-height: 0.72;
+  line-height: 0.74;
   white-space: nowrap;
 }
 

@@ -260,11 +260,10 @@ function formatConfidence(value: number | null | undefined) {
         <TransitionGroup v-if="savedReels.length" name="list" tag="ul">
           <li v-for="item in savedReels" :key="item.reelId">
             <button class="profile-link" type="button" @click="selectSaved(item)">
-              <strong>{{ item.reel.shortcode }}</strong>
+              <strong>{{ item.reel.restaurant?.name || item.reel.shortcode }}</strong>
               <span>{{ item.savedStatus }} / {{ item.reel.status }}</span>
               <small v-if="item.reel.restaurant">
-                {{ item.reel.restaurant.name }}
-                <template v-if="item.reel.restaurant.city"> · {{ item.reel.restaurant.city }}</template>
+                <template v-if="item.reel.restaurant.area">{{ item.reel.restaurant.area }} · </template>{{ item.reel.restaurant.city || item.reel.shortcode }}
               </small>
               <small v-else-if="item.reel.isFood === false">Not a food reel</small>
               <small v-else-if="item.reel.status === 'complete'">Location needs review</small>

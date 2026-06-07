@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/kerala_boundary.dart';
 import '../../models/reel.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
@@ -61,12 +62,44 @@ class MapTab extends StatelessWidget {
                 cameraConstraint: CameraConstraint.contain(
                   bounds: _keralaBounds,
                 ),
+                // Pan + zoom only — no map rotation.
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
               ),
               children: [
                 TileLayer(
                   // Stylised, illustrative basemap (CARTO Voyager) — no API key.
                   urlTemplate:
-                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
+                  userAgentPackageName: 'in.theeta.app',
+                ),
+                // Mask everything outside Kerala (outer rect with Kerala holes).
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: const [
+                        LatLng(5, 72),
+                        LatLng(5, 80),
+                        LatLng(15, 80),
+                        LatLng(15, 72),
+                      ],
+                      holePointsList: keralaRings,
+                      color: const Color(0xFFEEF0E6),
+                    ),
+                  ],
+                ),
+                PolylineLayer(
+                  polylines: [
+                    for (final ring in keralaRings)
+                      Polyline(points: ring, color: ink, strokeWidth: 2),
+                  ],
+                ),
+                // Labels ABOVE the mask so place names are never greyed out.
+                TileLayer(
+                  urlTemplate:
+                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'in.theeta.app',
                 ),
@@ -111,7 +144,7 @@ class MapTab extends StatelessWidget {
       context: context,
       backgroundColor: paper,
       shape: const RoundedRectangleBorder(
-        side: BorderSide(color: ink, width: 2),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(20),

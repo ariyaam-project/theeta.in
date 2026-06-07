@@ -89,10 +89,10 @@ class ProfileTab extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: state.busy ? null : () => _confirmLogout(context),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: accent,
-                  side: const BorderSide(color: accent, width: 2),
-                  shape: const RoundedRectangleBorder(),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: peach,
+                  side: BorderSide(color: peach.withValues(alpha: 0.6), width: 1.5),
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 icon: const Icon(Icons.logout),
                 label: const Text(
@@ -133,8 +133,8 @@ class ProfileTab extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: paper,
-        shape: const RoundedRectangleBorder(
-          side: BorderSide(color: ink, width: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
         title: const Text('Log out?'),
         content: const Text('You will need to sign in again to save reels.'),

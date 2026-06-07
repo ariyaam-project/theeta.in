@@ -89,44 +89,7 @@ const features = [
       <div class="edu-hero-art">
         <span class="edu-spark edu-spark-1" aria-hidden="true">✦</span>
         <span class="edu-spark edu-spark-2" aria-hidden="true">✦</span>
-        <div class="edu-phone">
-          <div class="edu-phone-status">
-            <span>9:41</span>
-            <span>●●● 📶 🔋</span>
-          </div>
-          <p class="edu-greet">Good evening,</p>
-          <h3 class="edu-greet-name">Hungry foodie</h3>
-
-          <div class="edu-highlight">
-            <div>
-              <strong>New spot resolved</strong>
-              <p>Bait Al Mandi · Kochi</p>
-              <button type="button">View on map</button>
-            </div>
-            <span class="edu-highlight-emoji" aria-hidden="true">🍛</span>
-          </div>
-
-          <div class="edu-chips">
-            <span class="edu-chip is-on">All</span>
-            <span class="edu-chip">Biryani</span>
-            <span class="edu-chip">Cafe</span>
-          </div>
-
-          <div class="edu-saved-head">
-            <strong>Saved spots</strong>
-            <span>See all</span>
-          </div>
-          <div class="edu-mini-grid">
-            <div class="edu-mini edu-mini-a">
-              <span aria-hidden="true">🍜</span>
-              <b>Ramen lane</b>
-            </div>
-            <div class="edu-mini edu-mini-b">
-              <span aria-hidden="true">🧁</span>
-              <b>Dessert bar</b>
-            </div>
-          </div>
-        </div>
+        <img class="edu-hero-img" src="/images/hero.png" alt="Theeta app preview" />
       </div>
     </section>
 
@@ -469,6 +432,14 @@ const features = [
 .edu-spark-2 {
   top: 18%;
   right: 16%;
+}
+
+.edu-hero-img {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 50px 90px rgba(44, 43, 58, 0.35));
 }
 
 .edu-phone {

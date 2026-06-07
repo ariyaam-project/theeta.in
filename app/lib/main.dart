@@ -15,7 +15,7 @@ class ThetaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Theta',
+      title: 'Theeta',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -40,17 +40,46 @@ class ThetaApp extends StatelessWidget {
         ),
         cardTheme: CardThemeData(
           color: paper,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(0),
-            side: const BorderSide(color: ink, width: 2),
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: ink.withValues(alpha: 0.06)),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: accent,
             foregroundColor: Colors.white,
-            textStyle: const TextStyle(fontWeight: FontWeight.w900),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 24),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            shape: const StadiumBorder(),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: ink,
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 24),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            side: BorderSide(color: ink.withValues(alpha: 0.12), width: 1.5),
+            shape: const StadiumBorder(),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: paper,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: ink.withValues(alpha: 0.12)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: ink.withValues(alpha: 0.12)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: accent, width: 2),
           ),
         ),
       ),

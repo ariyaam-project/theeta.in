@@ -237,21 +237,7 @@ class _LoginPageState extends State<LoginPage> {
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         hintText: hint,
-        filled: true,
-        fillColor: Colors.white,
         suffixIcon: suffix,
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: ink, width: 2),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: ink, width: 2),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.zero,
-          borderSide: BorderSide(color: accent, width: 2),
-        ),
       ),
     );
   }

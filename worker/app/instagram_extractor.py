@@ -1,9 +1,12 @@
+import logging
 from typing import Any
 
 import yt_dlp
 
 from .config import Settings
 from .models import ReelComment, ReelEvidence
+
+logger = logging.getLogger(__name__)
 
 
 def extract_evidence(url: str, config: Settings) -> ReelEvidence:
@@ -33,9 +36,27 @@ def extract_evidence(url: str, config: Settings) -> ReelEvidence:
                     timestamp=item.get("timestamp"),
                 )
             )
-    return ReelEvidence(
+    evidence = ReelEvidence(
         caption=(info.get("description") or "").strip() or None,
         uploader=info.get("uploader"),
         channel=info.get("channel"),
         comments=comments,
     )
+    logger.info(
+        "instagram_extractor.evidence url=%s uploader=%r channel=%r total_comments=%s used_comments=%s",
+        url,
+        evidence.uploader,
+        evidence.channel,
+        len(info.get("comments") or []),
+        len(comments),
+    )
+    logger.info("instagram_extractor.caption:\n%s", evidence.caption or "(none)")
+    for index, comment in enumerate(comments):
+        logger.info(
+            "instagram_extractor.comment[%s] author=%r likes=%s text=%r",
+            index,
+            comment.author,
+            comment.likeCount,
+            comment.text,
+        )
+    return evidence

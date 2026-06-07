@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/reel.dart';
-
-const _ink = Color(0xFF2F231A);
-const _paper = Color(0xFFFFF8EC);
-const _accent = Color(0xFFE1306C);
-const _gold = Color(0xFFF7AB3F);
+import '../theme.dart';
 
 class ReelTile extends StatelessWidget {
   final Reel reel;
@@ -33,84 +29,90 @@ class ReelTile extends StatelessWidget {
         restaurant?.confidence ?? extraction?.suggestedLocationConfidence;
 
     return Container(
-      decoration: const BoxDecoration(color: _ink),
-      child: Transform.translate(
-        offset: const Offset(-3, -3),
-        child: Material(
-          color: _paper,
-          shape: const RoundedRectangleBorder(
-            side: BorderSide(color: _ink, width: 2),
+      decoration: BoxDecoration(
+        color: paper,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: ink.withValues(alpha: 0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: ink.withValues(alpha: 0.08),
+            blurRadius: 24,
+            spreadRadius: -14,
+            offset: const Offset(0, 14),
           ),
-          child: InkWell(
-            onTap: onRefresh,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _StatusIcon(processing: reel.isProcessing),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          locationName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: _ink,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.4,
-                          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onRefresh,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _StatusIcon(processing: reel.isProcessing),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        locationName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          locationAddress,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _Pill(reel.shortcode),
-                            _Pill(_statusLabel),
-                            if (confidence != null)
-                              _Pill(
-                                '${(confidence * 100).round()}% confidence',
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (v) {
-                      if (v == 'open') onOpen();
-                      if (v == 'refresh') onRefresh();
-                      if (v == 'delete') onDelete();
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: 'refresh',
-                        child: Text('Refresh status'),
                       ),
-                      PopupMenuItem(
-                        value: 'open',
-                        child: Text('Open in Instagram'),
+                      const SizedBox(height: 4),
+                      Text(
+                        locationAddress,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: muted,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _Pill(reel.shortcode),
+                          _Pill(_statusLabel),
+                          if (confidence != null)
+                            _Pill('${(confidence * 100).round()}% confidence'),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                PopupMenuButton<String>(
+                  iconColor: muted,
+                  onSelected: (v) {
+                    if (v == 'open') onOpen();
+                    if (v == 'refresh') onRefresh();
+                    if (v == 'delete') onDelete();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'refresh',
+                      child: Text('Refresh status'),
+                    ),
+                    PopupMenuItem(
+                      value: 'open',
+                      child: Text('Open in Instagram'),
+                    ),
+                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -129,18 +131,18 @@ class _StatusIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: processing ? _gold : _accent,
-        border: Border.all(color: _ink, width: 2),
+        color: processing ? softPurple : accent,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Center(
         child: processing
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: _ink),
+                child: CircularProgressIndicator(strokeWidth: 2, color: accent),
               )
             : const Icon(Icons.place, color: Colors.white),
       ),
@@ -156,17 +158,17 @@ class _Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: _ink, width: 1.5),
+        color: softPurple,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: const TextStyle(
-          color: _ink,
+          color: accent,
           fontSize: 11,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
